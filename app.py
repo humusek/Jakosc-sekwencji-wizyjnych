@@ -172,9 +172,8 @@ def encode_video():
     latency = request.form.get("latency", "quality")
     bmode = request.form.get("bmode", "variable")
     start = max(0.0, float(request.form.get("start", 0)))
-    dlugosc = min(2.0, max(0.5, float(request.form.get("dlugosc", 2.0))))
-    szer_raw = int(request.form.get("szer", 640))
-    szer = 640 if (szer_raw == 0 or szer_raw > 640) else szer_raw
+    dlugosc = min(10.0, max(0.5, float(request.form.get("dlugosc", 3.0))))
+    szer = max(0, int(request.form.get("szer", 854)))
     kolej = request.form.get("kolej", "tff")
     lowpass = request.form.get("lowpass", "1") == "1"
     mbaff = request.form.get("mbaff", "1") == "1"
@@ -191,13 +190,12 @@ def encode_video():
         except FileNotFoundError as e:
             return jsonify({"error": str(e)}), 404
 
-        ref_path = os.path.join(tmpdir, "ref.mp4")
         out_path = os.path.join(tmpdir, "out.mkv")
         psnr_log = os.path.join(tmpdir, "psnr.log")
         ssim_log = os.path.join(tmpdir, "ssim.log")
 
         out_fps = fps / 2.0
-        base_scale = [f"scale={szer}:-2:flags=fast_bilinear"]
+        base_scale = [f"scale={szer}:-2:flags=bicubic"] if szer > 0 else ["scale=trunc(iw/2)*2:trunc(ih/2)*2"]
 
         if tryb == "interlaced":
             lp = 1 if lowpass else 0
@@ -205,40 +203,18 @@ def encode_video():
         else:
             ref_filters = base_scale + [f"select='not(mod(n\\,2))',setpts=N/({out_fps}*TB)"]
 
-        ref_cmd = [
-            "ffmpeg", "-y", "-threads", "1", "-ss", str(start), "-t", str(dlugosc),
-            "-i", in_path, "-vf", ",".join(ref_filters),
-            "-c:v", "libx264", "-preset", "ultrafast", "-crf", "0",
-            "-pix_fmt", "yuv420p", ref_path
+        vf_chain = ",".join(ref_filters) + ",format=yuv420p"
+
+        enc_cmd = [
+            "ffmpeg", "-y", "-nostats", "-loglevel", "error",
+            "-threads", "1", "-ss", str(start), "-t", str(dlugosc),
+            "-i", in_path, "-vf", vf_chain
         ]
-        try:
-            run_cmd(ref_cmd)
-        except RuntimeError as e:
-            return jsonify({"error": f"Blad przygotowania wzorca: {e}"}), 500
-
-        clean_urls = None
-        if keep and tryb == "interlaced":
-            clean_filters = base_scale + [f"select='not(mod(n\\,2))',setpts=N/({out_fps}*TB)"]
-            clean_cmd = [
-                "ffmpeg", "-y", "-threads", "1", "-ss", str(start), "-t", str(dlugosc),
-                "-i", in_path, "-vf", ",".join(clean_filters),
-                "-vframes", "8", "-q:v", "5", os.path.join(tmpdir, "clean_%04d.jpg")
-            ]
-            try:
-                run_cmd(clean_cmd)
-                clean_urls, _, _ = jpg_list_to_data_urls(os.path.join(tmpdir, "clean_*.jpg"))
-            except RuntimeError as e:
-                return jsonify({"error": f"Blad przygotowania czystego zrodla: {e}"}), 500
-
-        if os.path.dirname(in_path) == tmpdir and os.path.exists(in_path):
-            os.remove(in_path)
-
-        enc_cmd = ["ffmpeg", "-y", "-threads", "1", "-i", ref_path]
 
         if kodek == "H.264":
             preset = "ultrafast" if latency == "realtime" else "fast"
             enc_cmd += ["-c:v", "libx264", "-preset", preset]
-            x264_opts = ["bframes=0", "ref=1", "rc-lookahead=0", "threads=1"]
+            x264_opts = ["bframes=0", "ref=1", "rc-lookahead=0", "sync-lookahead=0", "threads=1"]
             if tryb == "interlaced" and mbaff:
                 parity = "tff=1" if kolej == "tff" else "bff=1"
                 enc_cmd += ["-flags", "+ildct+ilme"]
@@ -247,16 +223,27 @@ def encode_video():
         elif kodek == "H.265":
             preset = "ultrafast" if latency == "realtime" else "superfast"
             enc_cmd += ["-c:v", "libx265", "-preset", preset]
-            x265_opts = ["bframes=0", "ref=1", "rc-lookahead=0", "frame-threads=1", "pools=none", "no-sao=1"]
+            x265_opts = [
+                "ctu=32", "min-cu-size=16", "bframes=0", "ref=1",
+                "rc-lookahead=0", "lookahead-slices=0", "frame-threads=1",
+                "pools=none", "no-sao=1", "no-weightp=1", "no-weightb=1"
+            ]
             if tryb == "interlaced":
                 x265_opts.insert(0, f"interlace={kolej}")
             enc_cmd += ["-x265-params", ":".join(x265_opts)]
         elif kodek == "AV1":
             if encs["AV1"] == "libaom-av1":
                 cpu_used = "8" if latency == "realtime" else "7"
-                enc_cmd += ["-c:v", "libaom-av1", "-usage", "realtime", "-cpu-used", cpu_used, "-lag-in-frames", "0"]
+                enc_cmd += [
+                    "-c:v", "libaom-av1", "-usage", "realtime", "-cpu-used", cpu_used,
+                    "-lag-in-frames", "0", "-auto-alt-ref", "0", "-arnr-maxframes", "0",
+                    "-tile-columns", "0", "-tile-rows", "0", "-row-mt", "0"
+                ]
             else:
-                enc_cmd += ["-c:v", "libsvtav1", "-preset", "12", "-svtav1-params", "lp=1:lookahead=0:pred-struct=1"]
+                enc_cmd += [
+                    "-c:v", "libsvtav1", "-preset", "12",
+                    "-svtav1-params", "lp=1:lookahead=0:pred-struct=1:tile-rows=0:tile-columns=0"
+                ]
 
         enc_cmd += ["-b:v", f"{kbps}k"]
         if bmode == "constant":
@@ -270,10 +257,17 @@ def encode_video():
             return jsonify({"error": f"Blad kodera {kodek}: {e}"}), 500
         encode_sec = time.perf_counter() - t0
 
+        lavfi = (
+            f"[1:v]{vf_chain},split=2[ref1][ref2];"
+            f"[0:v]split=2[enc1][enc2];"
+            f"[enc1][ref1]psnr=stats_file={psnr_log};"
+            f"[enc2][ref2]ssim=stats_file={ssim_log}"
+        )
         metric_cmd = [
-            "ffmpeg", "-y", "-threads", "1", "-i", out_path, "-i", ref_path,
-            "-lavfi", f"[0:v][1:v]psnr=stats_file={psnr_log};[0:v][1:v]ssim=stats_file={ssim_log}",
-            "-f", "null", "-"
+            "ffmpeg", "-y", "-nostats", "-loglevel", "error",
+            "-threads", "1", "-i", out_path,
+            "-ss", str(start), "-t", str(dlugosc), "-i", in_path,
+            "-lavfi", lavfi, "-f", "null", "-"
         ]
         try:
             run_cmd(metric_cmd)
@@ -315,12 +309,34 @@ def encode_video():
         }
 
         if keep:
-            run_cmd(["ffmpeg", "-y", "-threads", "1", "-i", ref_path, "-vframes", "8", "-q:v", "5", os.path.join(tmpdir, "ref_%04d.jpg")])
-            if os.path.exists(ref_path):
-                os.remove(ref_path)
-            run_cmd(["ffmpeg", "-y", "-threads", "1", "-i", out_path, "-vframes", "8", "-q:v", "5", os.path.join(tmpdir, "enc_%04d.jpg")])
+            run_cmd([
+                "ffmpeg", "-y", "-nostats", "-loglevel", "error",
+                "-threads", "1", "-ss", str(start), "-t", str(dlugosc),
+                "-i", in_path, "-vf", vf_chain,
+                "-vframes", "90", "-q:v", "6", os.path.join(tmpdir, "ref_%04d.jpg")
+            ])
+            clean_urls = None
+            if tryb == "interlaced":
+                clean_filters = base_scale + [f"select='not(mod(n\\,2))',setpts=N/({out_fps}*TB)"]
+                run_cmd([
+                    "ffmpeg", "-y", "-nostats", "-loglevel", "error",
+                    "-threads", "1", "-ss", str(start), "-t", str(dlugosc),
+                    "-i", in_path, "-vf", ",".join(clean_filters),
+                    "-vframes", "90", "-q:v", "6", os.path.join(tmpdir, "clean_%04d.jpg")
+                ])
+                clean_urls, _, _ = jpg_list_to_data_urls(os.path.join(tmpdir, "clean_*.jpg"))
+
+            if os.path.dirname(in_path) == tmpdir and os.path.exists(in_path):
+                os.remove(in_path)
+
+            run_cmd([
+                "ffmpeg", "-y", "-nostats", "-loglevel", "error",
+                "-threads", "1", "-i", out_path,
+                "-vframes", "90", "-q:v", "6", os.path.join(tmpdir, "enc_%04d.jpg")
+            ])
             if os.path.exists(out_path):
                 os.remove(out_path)
+
             ref_urls, w, h = jpg_list_to_data_urls(os.path.join(tmpdir, "ref_*.jpg"))
             enc_urls, _, _ = jpg_list_to_data_urls(os.path.join(tmpdir, "enc_*.jpg"))
             m = min(len(ref_urls), len(enc_urls), n_frames)
