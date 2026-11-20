@@ -116,8 +116,8 @@ def probe_video():
             return jsonify({"error": str(e)}), 404
 
         cmd = [
-            "ffprobe", "-v", "error", "-select_streams", "v:0",
-            "-show_entries", "stream=width,height,r_frame_rate,nb_frames,duration:format=duration",
+            "ffprobe", "-v", "error", "-count_frames", "-select_streams", "v:0",
+            "-show_entries", "stream=width,height,r_frame_rate,nb_read_frames,nb_frames,duration:format=duration",
             "-of", "default=noprint_wrappers=1", in_path
         ]
         try:
@@ -143,13 +143,13 @@ def probe_video():
         elif rfr not in ("", "N/A"):
             fps = float(rfr)
 
-        dur_raw = info.get("duration", "N/A")
-        nb_raw = info.get("nb_frames", "N/A")
+        nb_raw = info.get("nb_read_frames", info.get("nb_frames", "N/A"))
         count = int(nb_raw) if nb_raw.isdigit() else 0
-        if dur_raw not in ("", "N/A"):
-            dur = float(dur_raw)
-        elif count > 0:
+        dur_raw = info.get("duration", "N/A")
+        if count > 0 and fps > 0:
             dur = count / fps
+        elif dur_raw not in ("", "N/A"):
+            dur = float(dur_raw)
         else:
             dur = 10.0
 
@@ -190,6 +190,7 @@ def encode_video():
         except FileNotFoundError as e:
             return jsonify({"error": str(e)}), 404
 
+        ref_path = os.path.join(tmpdir, "ref.mkv")
         out_path = os.path.join(tmpdir, "out.mkv")
         psnr_log = os.path.join(tmpdir, "psnr.log")
         ssim_log = os.path.join(tmpdir, "ssim.log")
@@ -199,17 +200,59 @@ def encode_video():
 
         if tryb == "interlaced":
             lp = 1 if lowpass else 0
-            ref_filters = base_scale + [f"interlace=scan={kolej}:lowpass={lp}"]
+            ref_filters = base_scale + [
+                f"interlace=scan={kolej}:lowpass={lp}",
+                f"setpts=N/({out_fps}*TB)",
+                f"fps={out_fps}",
+                "format=yuv420p"
+            ]
         else:
-            ref_filters = base_scale + [f"select='not(mod(n\\,2))',setpts=N/({out_fps}*TB)"]
+            ref_filters = base_scale + [
+                "framestep=2",
+                f"setpts=N/({out_fps}*TB)",
+                f"fps={out_fps}",
+                "format=yuv420p"
+            ]
 
-        vf_chain = ",".join(ref_filters) + ",format=yuv420p"
-
-        enc_cmd = [
+        ref_cmd = [
             "ffmpeg", "-y", "-nostats", "-loglevel", "error",
-            "-threads", "1", "-ss", str(start), "-t", str(dlugosc),
-            "-i", in_path, "-vf", vf_chain
+            "-threads", "1", "-i", in_path,
+            "-ss", str(start), "-t", str(dlugosc),
+            "-vf", ",".join(ref_filters),
+            "-vsync", "0", "-c:v", "libx264", "-preset", "ultrafast", "-crf", "0",
+            ref_path
         ]
+        try:
+            run_cmd(ref_cmd)
+        except RuntimeError as e:
+            return jsonify({"error": f"Blad przygotowania wzorca: {e}"}), 500
+
+        clean_urls = None
+        if keep and tryb == "interlaced":
+            clean_filters = base_scale + [
+                "framestep=2",
+                f"setpts=N/({out_fps}*TB)",
+                f"fps={out_fps}",
+                "format=yuv420p"
+            ]
+            clean_cmd = [
+                "ffmpeg", "-y", "-nostats", "-loglevel", "error",
+                "-threads", "1", "-i", in_path,
+                "-ss", str(start), "-t", str(dlugosc),
+                "-vf", ",".join(clean_filters),
+                "-vsync", "0", "-vframes", "90", "-q:v", "6",
+                os.path.join(tmpdir, "clean_%04d.jpg")
+            ]
+            try:
+                run_cmd(clean_cmd)
+                clean_urls, _, _ = jpg_list_to_data_urls(os.path.join(tmpdir, "clean_*.jpg"))
+            except RuntimeError as e:
+                return jsonify({"error": f"Blad przygotowania czystego zrodla: {e}"}), 500
+
+        if os.path.dirname(in_path) == tmpdir and os.path.exists(in_path):
+            os.remove(in_path)
+
+        enc_cmd = ["ffmpeg", "-y", "-nostats", "-loglevel", "error", "-threads", "1", "-i", ref_path]
 
         if kodek == "H.264":
             preset = "ultrafast" if latency == "realtime" else "fast"
@@ -245,7 +288,7 @@ def encode_video():
                     "-svtav1-params", "lp=1:lookahead=0:pred-struct=1:tile-rows=0:tile-columns=0"
                 ]
 
-        enc_cmd += ["-b:v", f"{kbps}k"]
+        enc_cmd += ["-vsync", "0", "-b:v", f"{kbps}k"]
         if bmode == "constant":
             enc_cmd += ["-minrate", f"{kbps}k", "-maxrate", f"{kbps}k", "-bufsize", f"{kbps * 2}k"]
         enc_cmd.append(out_path)
@@ -258,15 +301,14 @@ def encode_video():
         encode_sec = time.perf_counter() - t0
 
         lavfi = (
-            f"[1:v]{vf_chain},split=2[ref1][ref2];"
-            f"[0:v]split=2[enc1][enc2];"
+            f"[0:v]setpts=N/TB,split=2[enc1][enc2];"
+            f"[1:v]setpts=N/TB,split=2[ref1][ref2];"
             f"[enc1][ref1]psnr=stats_file={psnr_log};"
             f"[enc2][ref2]ssim=stats_file={ssim_log}"
         )
         metric_cmd = [
             "ffmpeg", "-y", "-nostats", "-loglevel", "error",
-            "-threads", "1", "-i", out_path,
-            "-ss", str(start), "-t", str(dlugosc), "-i", in_path,
+            "-threads", "1", "-i", out_path, "-i", ref_path,
             "-lavfi", lavfi, "-f", "null", "-"
         ]
         try:
@@ -311,28 +353,18 @@ def encode_video():
         if keep:
             run_cmd([
                 "ffmpeg", "-y", "-nostats", "-loglevel", "error",
-                "-threads", "1", "-ss", str(start), "-t", str(dlugosc),
-                "-i", in_path, "-vf", vf_chain,
-                "-vframes", "90", "-q:v", "6", os.path.join(tmpdir, "ref_%04d.jpg")
+                "-threads", "1", "-i", ref_path,
+                "-vsync", "0", "-vframes", "90", "-q:v", "6",
+                os.path.join(tmpdir, "ref_%04d.jpg")
             ])
-            clean_urls = None
-            if tryb == "interlaced":
-                clean_filters = base_scale + [f"select='not(mod(n\\,2))',setpts=N/({out_fps}*TB)"]
-                run_cmd([
-                    "ffmpeg", "-y", "-nostats", "-loglevel", "error",
-                    "-threads", "1", "-ss", str(start), "-t", str(dlugosc),
-                    "-i", in_path, "-vf", ",".join(clean_filters),
-                    "-vframes", "90", "-q:v", "6", os.path.join(tmpdir, "clean_%04d.jpg")
-                ])
-                clean_urls, _, _ = jpg_list_to_data_urls(os.path.join(tmpdir, "clean_*.jpg"))
-
-            if os.path.dirname(in_path) == tmpdir and os.path.exists(in_path):
-                os.remove(in_path)
+            if os.path.exists(ref_path):
+                os.remove(ref_path)
 
             run_cmd([
                 "ffmpeg", "-y", "-nostats", "-loglevel", "error",
                 "-threads", "1", "-i", out_path,
-                "-vframes", "90", "-q:v", "6", os.path.join(tmpdir, "enc_%04d.jpg")
+                "-vsync", "0", "-vframes", "90", "-q:v", "6",
+                os.path.join(tmpdir, "enc_%04d.jpg")
             ])
             if os.path.exists(out_path):
                 os.remove(out_path)
