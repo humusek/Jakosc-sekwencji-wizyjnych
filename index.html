@@ -277,12 +277,12 @@ function loadImage(url) {
   return new Promise((res, rej) => {
     const img = new Image();
     img.onload = () => res(img);
-    img.onerror = () => rej(new Error("Błąd dekodowania klatki PNG"));
+    img.onerror = () => rej(new Error("Błąd dekodowania klatki"));
     img.src = url;
   });
 }
 
-async function decodePngSequence(urls, w, h) {
+async function decodeImageSequence(urls, w, h) {
   if (!urls || !urls.length) return null;
   const cv = document.createElement("canvas");
   cv.width = w;
@@ -321,9 +321,9 @@ async function runExperiment(p, tryb, keep) {
   if (!r.ok) throw new Error(data.error || "Błąd kodowania na serwerze");
 
   if (keep) {
-    data.ref = await decodePngSequence(data.ref_urls, data.w, data.h);
-    data.enc = await decodePngSequence(data.enc_urls, data.w, data.h);
-    data.clean = data.clean_urls ? await decodePngSequence(data.clean_urls, data.w, data.h) : null;
+    data.ref = await decodeImageSequence(data.ref_urls, data.w, data.h);
+    data.enc = await decodeImageSequence(data.enc_urls, data.w, data.h);
+    data.clean = data.clean_urls ? await decodeImageSequence(data.clean_urls, data.w, data.h) : null;
   }
   return data;
 }
@@ -525,9 +525,10 @@ function initViewer() {
 function setViewerRange() {
   const s = ST.stan[$("vWidok").value];
   if (!s) return;
-  $("vK").max = s.n - 1;
+  const maxIdx = Math.max(0, s.n - 1);
+  $("vK").max = maxIdx;
   $("vK").value = 0;
-  $("vKmax").textContent = s.n - 1;
+  $("vKmax").textContent = maxIdx;
 }
 
 function ensurePanels(nc) {
@@ -546,17 +547,24 @@ function ensurePanels(nc) {
 
 function renderViewer() {
   const s = ST.stan[$("vWidok").value];
-  if (!s || !s.ref) return;
-  const k = Math.min(+$("vK").value, s.n - 1), gain = +$("vGain").value, { w, h } = s;
+  if (!s || !s.ref || !s.enc || !s.ref.length) return;
+  const maxIdx = Math.max(0, s.ref.length - 1);
+  $("vK").max = maxIdx;
+  $("vKmax").textContent = maxIdx;
+  const k = Math.max(0, Math.min(+$("vK").value, maxIdx));
+  $("vK").value = k;
+  const gain = +$("vGain").value, { w, h } = s;
   $("vKV").textContent = k;
-  $("vInfo").textContent = `Widok: ${s.tryb} | klatka ${k} z ${s.n - 1} | ${s.fo.toFixed(2)} kl./s`;
-  const a = s.ref[k], b = s.enc[k], d = new ImageData(w, h);
+  $("vInfo").textContent = `Widok: ${s.tryb} | klatka ${k} z ${maxIdx} | ${s.fo.toFixed(2)} kl./s`;
+  const a = s.ref[k], b = s.enc[k];
+  if (!a || !b) return;
+  const d = new ImageData(w, h);
   for (let i = 0; i < d.data.length; i += 4) {
     for (let c = 0; c < 3; c++) d.data[i + c] = Math.min(255, Math.abs(a.data[i + c] - b.data[i + c]) * gain);
     d.data[i + 3] = 255;
   }
   const panels = [];
-  if (s.clean) panels.push(["Czyste źródło (progressive)", s.clean[k]]);
+  if (s.clean && s.clean[k]) panels.push(["Czyste źródło (progressive)", s.clean[k]]);
   panels.push([`Wzorzec (${s.tryb}, przed kodowaniem)`, a], ["Po kodowaniu", b], [`Różnica x${gain}`, d]);
   ensurePanels(panels.length);
   const size = +$("vS").value / 100, cw = Math.max(Math.round(w * size), 8), ch = Math.max(Math.round(cw * h / w), 8);
@@ -577,12 +585,13 @@ function renderViewer() {
     fc.lineWidth = Math.max(1, w / 400);
     fc.strokeRect(x0, y0, cw, ch);
   });
+  const count = s.klatki.PSNR.length || 1;
   lineChart($("fcPSNR"), [{ color: kolor("H.264"), pts: s.klatki.PSNR.map((v, i) => [i, v]) }], {
-    title: `PSNR na klatkę (średnia ${s.klatki.PSNR.length ? (s.klatki.PSNR.reduce((x, y) => x + y, 0) / s.n).toFixed(2) : "-"} dB)`,
+    title: `PSNR na klatkę (średnia ${s.klatki.PSNR.length ? (s.klatki.PSNR.reduce((x, y) => x + y, 0) / count).toFixed(2) : "-"} dB)`,
     cursor: k
   });
   lineChart($("fcSSIM"), [{ color: kolor("H.265"), pts: s.klatki.SSIM.map((v, i) => [i, v]) }], {
-    title: `SSIM na klatkę (średnia ${(s.klatki.SSIM.reduce((x, y) => x + y, 0) / s.n).toFixed(4)})`,
+    title: `SSIM na klatkę (średnia ${(s.klatki.SSIM.reduce((x, y) => x + y, 0) / count).toFixed(4)})`,
     cursor: k
   });
 }
@@ -598,10 +607,11 @@ function stopPlay() {
 function togglePlay() {
   if (ST.play) return stopPlay();
   const s = ST.stan[$("vWidok").value];
-  if (!s) return;
+  if (!s || !s.ref || !s.ref.length) return;
   $("play").textContent = "Pauza";
   ST.play = setInterval(() => {
-    const k = (+$("vK").value + 1) % s.n;
+    const len = s.ref.length;
+    const k = (+$("vK").value + 1) % len;
     $("vK").value = k;
     renderViewer();
   }, 1000 / Math.min(Math.max(s.fo, 1), 30));
@@ -613,7 +623,7 @@ $("run").addEventListener("click", onRun);
 $("bRun").addEventListener("click", onBatch);
 $("csv").addEventListener("click", downloadCsv);
 $("clr").addEventListener("click", () => { ST.hist = []; renderHistory(); });
-$("vWidok").addEventListener("change", () => { setViewerRange(); renderViewer(); });
+$("vWidok").addEventListener("change", () => { stopPlay(); setViewerRange(); renderViewer(); });
 for (const id of ["vK", "vX", "vY", "vS", "vGain"]) $(id).addEventListener("input", renderViewer);
 $("prev").addEventListener("click", () => { $("vK").value = Math.max(0, +$("vK").value - 1); renderViewer(); });
 $("next").addEventListener("click", () => { $("vK").value = Math.min(+$("vK").max, +$("vK").value + 1); renderViewer(); });
