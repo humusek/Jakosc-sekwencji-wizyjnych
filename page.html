@@ -3,157 +3,176 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Jakość wideo: przeplot i kodek (H.264 · H.265 · AV1)</title>
+<title>Jakość wideo: przeplot i kodek (H.264 - H.265 - AV1)</title>
 <style>
 :root{
-  --bg:#f4f1ea; --panel:#fbfaf6; --fg:#1d2320; --muted:#6a716c; --line:#d8d3c6;
-  --accent:#b4540a; --accent-fg:#fff; --ok:#1f7a4d; --bad:#b3261e;
-  --c264:#2563c9; --c265:#1f8a4c; --cav1:#c2371f;
-  --mono:ui-monospace,"SF Mono","Cascadia Mono",Consolas,monospace;
-  --sans:"Avenir Next","Segoe UI",system-ui,-apple-system,sans-serif;
-}
-@media (prefers-color-scheme:dark){
-  :root{--bg:#14181a; --panel:#1b2124; --fg:#e8e6df; --muted:#97a09a; --line:#2f383c;
-        --accent:#f09a45; --accent-fg:#1a1208; --ok:#58c98d; --bad:#ff8a80;
-        --c264:#6ea4ff; --c265:#5fd18d; --cav1:#ff7b61;}
+  --bg:#c0c0c0; --panel:#d4d0c8; --fg:#000000; --muted:#333333; --line:#808080;
+  --accent:#000080; --accent-fg:#ffffff; --ok:#006600; --bad:#990000;
+  --c264:#0000cc; --c265:#007700; --cav1:#cc0000;
+  --mono:"Courier New",Courier,monospace;
+  --serif:"Times New Roman",Times,Georgia,serif;
+  --ui:"MS Sans Serif",Tahoma,Verdana,Arial,sans-serif;
 }
 *{box-sizing:border-box}
-html{scroll-padding-top:12px}
-body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 var(--sans)}
-header{padding:34px 24px 22px;border-bottom:1px solid var(--line);
-  background:repeating-linear-gradient(90deg,transparent 0 39px,var(--line) 39px 40px) , var(--bg)}
-header .in{max-width:1280px;margin:0 auto}
-h1{font-size:clamp(24px,3.4vw,38px);line-height:1.1;margin:0 0 8px;letter-spacing:-.02em;font-weight:700}
-h1 span{color:var(--accent)}
-header p{margin:4px 0;max-width:80ch;color:var(--muted)}
-main{max-width:1280px;margin:0 auto;padding:20px 24px 60px}
-section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin:18px 0}
-h2{font-size:13px;text-transform:uppercase;letter-spacing:.12em;margin:0 0 14px;color:var(--accent);font-weight:700}
-h3{font-size:15px;margin:16px 0 6px}
-label{display:block;font-size:12px;color:var(--muted);margin-bottom:3px}
-input,select,textarea,button{font:inherit;color:inherit}
-input[type=number],input[type=text],select,textarea{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
-input[type=range]{width:100%;accent-color:var(--accent)}
-input[type=file]{width:100%}
-textarea{min-height:200px;resize:vertical;font-family:var(--sans)}
-button{padding:8px 14px;border:1px solid var(--line);border-radius:6px;background:var(--bg);cursor:pointer}
-button:hover:not(:disabled){border-color:var(--accent)}
-button:disabled{opacity:.5;cursor:default}
-button.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);font-weight:700;padding:10px 22px}
-.grid{display:grid;gap:12px 16px;grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
-.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.muted{color:var(--muted)} .mono{font-family:var(--mono)}
+html{scroll-padding-top:8px}
+body{margin:0;padding:12px;background:var(--bg);color:var(--fg);font:14px/1.45 var(--serif)}
+.wrap{max-width:1120px;margin:0 auto;background:var(--panel);border:2px outset #ffffff;padding:4px}
+header{background:var(--panel);border-bottom:2px groove #ffffff;padding:0 0 12px 0;margin-bottom:12px}
+.titlebar{background:var(--accent);color:var(--accent-fg);padding:5px 10px;font:bold 13px var(--ui);letter-spacing:.02em;display:flex;justify-content:space-between;align-items:center}
+header .in{padding:12px 14px 2px}
+h1{font:bold 24px/1.2 var(--serif);margin:0 0 8px;color:#000080}
+h1 span{text-decoration:underline}
+header p{margin:4px 0;max-width:85ch;color:var(--fg);font-size:14px}
+main{padding:0 10px 14px}
+section{background:var(--panel);border:2px groove #ffffff;padding:14px 16px;margin:14px 0}
+h2{font:bold 15px var(--serif);text-transform:uppercase;margin:0 0 12px;padding-bottom:4px;border-bottom:2px groove #ffffff;color:#000080;letter-spacing:.04em}
+h3{font:bold 14px var(--serif);margin:16px 0 6px;color:#000080}
+label{display:block;font:bold 12px var(--ui);color:var(--fg);margin-bottom:4px}
+input,select,textarea,button{font:13px var(--ui);color:var(--fg)}
+input[type=number],input[type=text],select,textarea{
+  width:100%;padding:4px 6px;background:#ffffff;color:#000000;
+  border:2px inset #808080;border-radius:0;font-family:var(--mono)
+}
+input:disabled,select:disabled{background:#e0e0e0;color:#555555}
+input[type=range]{width:100%;accent-color:#000080;margin:4px 0}
+input[type=file]{width:100%;background:#ffffff;border:2px inset #808080;padding:3px;font-family:var(--mono);font-size:12px}
+textarea{min-height:180px;resize:vertical;font-family:var(--mono);line-height:1.45}
+button{
+  padding:5px 12px;background:var(--panel);color:#000000;
+  border:2px outset #ffffff;border-radius:0;font:13px var(--ui);cursor:pointer
+}
+button:hover:not(:disabled){background:#dfdcd5}
+button:active:not(:disabled){border-style:inset;padding:6px 11px 4px 13px}
+button:disabled{color:#777777;cursor:default}
+button.primary{font-weight:bold;padding:6px 18px;outline:1px solid #000000}
+.grid{display:grid;gap:12px 16px;grid-template-columns:repeat(auto-fill,minmax(195px,1fr))}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.muted{color:var(--muted);font-size:13px}
+.mono{font-family:var(--mono)}
 .badges{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 0}
-.badge{font:12px var(--mono);padding:3px 9px;border-radius:99px;border:1px solid var(--line)}
-.badge.ok{color:var(--ok);border-color:var(--ok)} .badge.no{color:var(--bad);border-color:var(--bad)}
-.banner{padding:10px 14px;border:1px solid var(--bad);color:var(--bad);border-radius:8px;margin:12px 0}
-.note{font-size:13px;color:var(--muted);border-left:3px solid var(--line);padding:2px 0 2px 10px;margin:10px 0}
-.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:10px}
-.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .15s}
-.tablewrap{overflow-x:auto;margin-top:10px}
+.badge{font:bold 12px var(--mono);padding:3px 8px;background:#ffffff;border:2px inset #808080}
+.badge.ok{color:var(--ok);background:#eeffee}
+.badge.no{color:var(--bad);background:#ffeeee}
+.banner{padding:10px 12px;background:#ffeeee;border:2px solid var(--bad);color:var(--bad);margin:10px 0;font:bold 13px var(--ui)}
+.note{font:13px/1.45 var(--serif);color:#000000;background:#ffffe1;border:1px solid #808080;padding:7px 10px;margin:10px 0}
+.bar{height:20px;background:#ffffff;border:2px inset #808080;padding:2px;margin-top:12px}
+.bar i{display:block;height:100%;width:0;background:repeating-linear-gradient(90deg,#000080 0 10px,#d4d0c8 10px 12px);transition:width .15s}
+.tablewrap{overflow-x:auto;margin-top:12px;background:#ffffff;border:2px inset #808080}
+.tablewrap:empty{display:none}
 table{border-collapse:collapse;width:100%;font:12.5px var(--mono)}
-th,td{padding:5px 9px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
-th{color:var(--muted);font-weight:600} th:first-child,td:first-child{text-align:left}
+th,td{padding:4px 8px;text-align:right;border:1px solid #808080;white-space:nowrap}
+th{background:#000080;color:#ffffff;font-weight:bold}
+th:first-child,td:first-child{text-align:left}
+tbody tr:nth-child(even){background:#f2f2f2}
 .panels{display:grid;gap:10px;margin-top:12px}
-.pn{min-width:0}
-.pn .t{font-size:12px;color:var(--muted);margin-bottom:3px}
-.pn canvas{width:100%;display:block;background:#000;border-radius:4px}
+.pn{min-width:0;background:#c8c4bc;border:2px groove #ffffff;padding:6px}
+.pn .t{font:bold 12px var(--ui);color:#000080;margin-bottom:4px}
+.pn canvas{width:100%;display:block;background:#000000;border:2px inset #808080}
 .pn canvas.z{image-rendering:pixelated;margin-top:6px}
-.charts{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));margin-top:12px}
-.charts canvas{width:100%;display:block}
-.legend{display:flex;gap:14px;flex-wrap:wrap;font:12px var(--mono);margin-top:6px}
+.charts{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));margin-top:12px}
+.charts canvas{width:100%;display:block;background:#ffffff;border:2px inset #808080}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font:12px var(--mono);margin-top:8px;background:#ffffff;border:2px inset #808080;padding:5px 8px}
+.legend:empty{display:none}
 .legend i{display:inline-block;width:18px;height:0;border-top:3px solid;vertical-align:middle;margin-right:5px}
-.checks{display:flex;gap:14px;flex-wrap:wrap}
-.checks label{display:flex;align-items:center;gap:6px;color:var(--fg);font-size:14px;margin:0}
+.checks{display:flex;gap:12px;flex-wrap:wrap;padding-top:2px}
+.checks label{display:flex;align-items:center;gap:5px;color:var(--fg);font:13px var(--ui);font-weight:normal;margin:0}
+ol.q{padding-left:22px;margin:6px 0 12px}
 ol.q li{margin:4px 0}
-footer{max-width:1280px;margin:0 auto;padding:0 24px 40px;color:var(--muted);font-size:13px}
+footer{border-top:2px groove #ffffff;padding:10px 14px;color:var(--muted);font:12px var(--ui);text-align:center}
 </style>
 </head>
 <body>
-<header><div class="in">
-  <h1>Jakość sekwencji wizyjnych: <span>przeplot</span> i <span>kodek</span></h1>
-  <p>Porównanie H.264, H.265 i AV1 dla wideo progressive i interlaced. Wszystko liczy się lokalnie w przeglądarce (WebCodecs), plik nigdzie nie jest wysyłany.</p>
-  <p>Metryki (PSNR, SSIM) liczone są względem bezstratnego wzorca <b>tej samej wersji</b> (progressive albo interlaced), czyli mierzą stratę wprowadzoną przez kodek, a nie różnicę między trybami.</p>
-  <div class="badges" id="support"><span class="badge">sprawdzam obsługę kodeków…</span></div>
-</div></header>
+<div class="wrap">
+<header>
+  <div class="titlebar">
+    <span>ANALIZA_JAKOSCI_WIDEO.EXE - WebCodecs Benchmark</span>
+    <span>[v1.0]</span>
+  </div>
+  <div class="in">
+    <h1>Jakość sekwencji wizyjnych: <span>przeplot</span> i <span>kodek</span></h1>
+    <p>Porównanie standardów H.264, H.265 i AV1 dla wideo progressive oraz interlaced. Obliczenia wykonywane są lokalnie w przeglądarce (API WebCodecs) bez wysyłania plików na serwer.</p>
+    <p>Metryki obiektywne (PSNR, SSIM) wyznaczane są względem bezstratnego wzorca <b>tej samej wersji</b> (progressive albo interlaced) - mierzą stratę wprowadzoną przez kodek.</p>
+    <div class="badges" id="support"><span class="badge">Sprawdzanie obsługi kodeków...</span></div>
+  </div>
+</header>
 
 <main>
-<div id="nosupport" class="banner" hidden>Ta przeglądarka nie obsługuje WebCodecs (VideoEncoder). Użyj aktualnego Chrome, Edge lub Safari na komputerze, strona musi być otwarta przez HTTPS (GitHub Pages) lub localhost.</div>
+<div id="nosupport" class="banner" hidden>UWAGA: Ta przeglądarka nie obsługuje WebCodecs (VideoEncoder). Wymagany jest aktualny Chrome, Edge lub Safari uruchomiony przez HTTPS (np. GitHub Pages) albo localhost.</div>
 
 <section>
-  <h2>1 · Źródło</h2>
+  <h2>1. Źródło sygnału wizyjnego</h2>
   <div class="grid">
     <div style="grid-column:span 2"><label for="file">Plik wideo (.y4m, .mp4, .webm, .mov)</label><input type="file" id="file" accept=".y4m,video/*"></div>
-    <div><label for="fps">Klatki/s źródła</label><input type="number" id="fps" value="25" min="1" max="120" step="0.001"></div>
+    <div><label for="fps">Klatki/s źródła [kl./s]</label><input type="number" id="fps" value="25" min="1" max="120" step="0.001"></div>
     <div><label>&nbsp;</label><button id="btnRepo" type="button">Wczytaj sekwencje/hall_monitor.y4m</button></div>
   </div>
-  <div class="note" id="srcInfo">Nie wczytano pliku. Dla plików .y4m liczba klatek/s jest czytana z nagłówka; dla mp4/webm jest wykrywana automatycznie i można ją poprawić ręcznie.</div>
+  <div class="note" id="srcInfo">Nie wczytano pliku. Dla plików .y4m liczba klatek/s czytana jest z nagłówka; dla mp4/webm wykrywana jest automatycznie z możliwością korekty ręcznej.</div>
 </section>
 
 <section>
-  <h2>2 · Panel sterowania</h2>
+  <h2>2. Panel sterowania kodowaniem</h2>
   <div class="grid">
     <div><label for="kodek">Kodek</label><select id="kodek"><option>H.264</option><option>H.265</option><option>AV1</option></select></div>
-    <div><label for="tryb">Tryb</label><select id="tryb"><option value="progressive">progressive</option><option value="interlaced">interlaced</option><option value="oba" selected>oba (porównanie)</option></select></div>
+    <div><label for="tryb">Tryb obrazu</label><select id="tryb"><option value="progressive">progressive</option><option value="interlaced">interlaced</option><option value="oba" selected>oba (porównanie)</option></select></div>
     <div><label>Przepływność: <b id="kbpsV" class="mono">1000</b> kb/s</label><input type="range" id="kbps" min="200" max="10000" step="100" value="1000"></div>
     <div><label for="latency">Tryb kodera (latencyMode)</label><select id="latency"><option value="quality" selected>quality (wolniej, lepiej)</option><option value="realtime">realtime (szybko)</option></select></div>
     <div><label for="bmode">Tryb przepływności</label><select id="bmode"><option value="variable" selected>zmienna (VBR)</option><option value="constant">stała (CBR)</option></select></div>
-    <div><label for="hw">Akceleracja</label><select id="hw"><option value="no-preference" selected>automatyczna</option><option value="prefer-software">preferuj programową</option><option value="prefer-hardware">preferuj sprzętową</option></select></div>
+    <div><label for="hw">Akceleracja sprzętowa</label><select id="hw"><option value="no-preference" selected>automatyczna</option><option value="prefer-software">preferuj programową</option><option value="prefer-hardware">preferuj sprzętową</option></select></div>
     <div><label for="start">Początek [s]</label><input type="number" id="start" value="0" min="0" step="0.5"></div>
     <div><label>Długość: <b id="dlugV" class="mono">3</b> s</label><input type="range" id="dlug" min="1" max="6" step="0.5" value="3"></div>
-    <div><label for="szer">Szerokość</label><select id="szer"><option value="0">oryginalna</option><option value="1920">1920</option><option value="1280">1280</option><option value="854" selected>854</option><option value="640">640</option></select></div>
+    <div><label for="szer">Szerokość [px]</label><select id="szer"><option value="0">oryginalna</option><option value="1920">1920</option><option value="1280">1280</option><option value="854" selected>854</option><option value="640">640</option></select></div>
     <div><label for="kolej">Kolejność półobrazów</label><select id="kolej"><option value="tff" selected>tff (górny pierwszy)</option><option value="bff">bff (dolny pierwszy)</option></select></div>
-    <div><label>Filtr pionowy półobrazów</label><div class="checks"><label><input type="checkbox" id="lowpass" checked> dolnoprzepustowy (jak w FFmpeg)</label></div></div>
+    <div><label>Filtr pionowy półobrazów</label><div class="checks"><label><input type="checkbox" id="lowpass" checked> dolnoprzepustowy (FFmpeg)</label></div></div>
     <div><label>MBAFF (H.264)</label><div class="checks"><label class="muted"><input type="checkbox" id="mbaff" disabled> niedostępne w przeglądarce</label></div></div>
-    <div><label>Wzmocnienie różnicy: <b id="gainV" class="mono">8</b>×</label><input type="range" id="gain" min="1" max="30" value="8"></div>
+    <div><label>Wzmocnienie różnicy: <b id="gainV" class="mono">8</b>x</label><input type="range" id="gain" min="1" max="30" value="8"></div>
   </div>
-  <div class="row" style="margin-top:16px">
-    <button class="primary" id="run" disabled>▶ Uruchom</button>
-    <span class="muted" id="status"></span>
+  <div class="row" style="margin-top:14px">
+    <button class="primary" id="run" disabled>[ Uruchom test ]</button>
+    <span class="mono" id="status"></span>
   </div>
   <div class="bar"><i id="prog"></i></div>
   <div class="tablewrap" id="wynik"></div>
 </section>
 
 <section>
-  <h2>3 · Przeglądarka klatek</h2>
-  <p class="muted" style="margin-top:0">Wybierz klatkę i fragment obrazu do powiększenia (żółty prostokąt). Szukaj <i>combingu</i> (grzebienia) na krawędziach poruszających się obiektów w trybie interlaced, rozmycia, blokowości i pierścieniowania.</p>
+  <h2>3. Przeglądarka klatek i powiększenie</h2>
+  <p class="muted" style="margin-top:0">Wybierz klatkę oraz wycinek obrazu do powiększenia (żółta ramka). Szukaj efektu <i>combingu</i> (grzebienia) na krawędziach poruszających się obiektów w trybie interlaced, rozmycia, blokowości i pierścieniowania.</p>
   <div class="grid">
     <div><label for="vWidok">Widok</label><select id="vWidok"></select></div>
     <div><label>Klatka: <b id="vKV" class="mono">0</b> / <span id="vKmax" class="mono">0</span></label><input type="range" id="vK" min="0" max="0" value="0"></div>
     <div><label>Pozycja X [%]</label><input type="range" id="vX" min="0" max="100" value="50"></div>
     <div><label>Pozycja Y [%]</label><input type="range" id="vY" min="0" max="100" value="50"></div>
     <div><label>Rozmiar okna [%]</label><input type="range" id="vS" min="3" max="60" value="15"></div>
-    <div><label>Wzmocnienie różnicy [×]</label><input type="range" id="vGain" min="1" max="30" value="8"></div>
+    <div><label>Wzmocnienie różnicy [x]</label><input type="range" id="vGain" min="1" max="30" value="8"></div>
   </div>
   <div class="row" style="margin-top:10px">
-    <button id="prev" disabled>◀ poprzednia</button><button id="next" disabled>następna ▶</button><button id="play" disabled>▶ odtwarzaj w pętli</button>
-    <span class="muted" id="vInfo">Najpierw uruchom eksperyment.</span>
+    <button id="prev" disabled>&lt;&lt; Poprzednia</button><button id="next" disabled>Następna &gt;&gt;</button><button id="play" disabled>Odtwarzaj w pętli</button>
+    <span class="mono" id="vInfo">Najpierw uruchom eksperyment.</span>
   </div>
   <div class="panels" id="panels"></div>
   <div class="charts"><div><canvas id="fcPSNR" data-h="190"></canvas></div><div><canvas id="fcSSIM" data-h="190"></canvas></div></div>
 </section>
 
 <section>
-  <h2>4 · Historia uruchomień i wykres jakość–przepływność</h2>
-  <div class="row"><button id="csv" disabled>Pobierz CSV</button><button id="clr" disabled>Wyczyść historię</button><span class="muted">Linia ciągła = progressive, przerywana = interlaced.</span></div>
+  <h2>4. Historia uruchomień i wykres jakość-przepływność</h2>
+  <div class="row"><button id="csv" disabled>Pobierz wyniki.csv</button><button id="clr" disabled>Wyczyść historię</button><span class="muted">Linia ciągła = progressive, linia przerywana = interlaced.</span></div>
   <div class="charts"><div><canvas id="rdPSNR" data-h="260"></canvas></div><div><canvas id="rdSSIM" data-h="260"></canvas></div></div>
   <div class="legend" id="rdLegend"></div>
   <div class="tablewrap" id="histTab"></div>
 </section>
 
 <section>
-  <h2>5 · Część B: eksperyment seryjny</h2>
-  <p class="muted" style="margin-top:0">Pełna macierz: wybrane kodeki × tryby (progressive i interlaced) × przepływności, dla aktualnie wczytanego pliku i ustawień z panelu. Same liczby, bez podglądu. Żeby objąć kilka sekwencji, wczytaj kolejne pliki i uruchom ponownie, historia się kumuluje.</p>
+  <h2>5. Część B: eksperyment seryjny</h2>
+  <p class="muted" style="margin-top:0">Pełna macierz pomiarowa: wybrane kodeki x tryby (progressive i interlaced) x przepływności dla aktualnie wczytanego pliku. Wyniki liczbowe dopisywane są automatycznie do historii.</p>
   <div class="grid">
     <div><label>Kodeki</label><div class="checks" id="bCodecs"><label><input type="checkbox" value="H.264" checked>H.264</label><label><input type="checkbox" value="H.265" checked>H.265</label><label><input type="checkbox" value="AV1" checked>AV1</label></div></div>
     <div><label for="bRates">Przepływności [kb/s], po przecinku</label><input type="text" id="bRates" value="500,1000,2000,4000"></div>
-    <div><label>&nbsp;</label><button id="bRun" disabled>▶ Uruchom serię</button></div>
+    <div><label>&nbsp;</label><button id="bRun" disabled>[ Uruchom serię ]</button></div>
   </div>
 </section>
 
 <section>
-  <h2>6 · Wnioski</h2>
+  <h2>6. Wnioski z ćwiczenia</h2>
   <ol class="q">
     <li>Który kodek daje najlepszy PSNR/SSIM przy tej samej przepływności? Czy ranking zależy od sekwencji?</li>
     <li>Jak przeplot wpływa na jakość w każdym kodeku?</li>
@@ -164,16 +183,15 @@ footer{max-width:1280px;margin:0 auto;padding:0 24px 40px;color:var(--muted);fon
   <textarea id="notes" placeholder="Wpisz tutaj swoje wnioski (zapisują się automatycznie w tej przeglądarce)."></textarea>
 
   <h3>Uwagi metodologiczne</h3>
-  <div class="note">„Wzorzec” w trybie interlaced to bezstratna wersja z przeplotem (ma „grzebień” już przed kodowaniem); „czyste źródło” to ta sama scena bez przeplotu. Oba tryby mają <b>połowę klatek źródła</b> (np. 24 → 12 kl./s), więc ruch bywa „szarpany”, co wynika z konstrukcji eksperymentu. Wersja interlaced powstaje z dwóch różnych klatek źródła (górne linie z jednej, dolne z drugiej).</div>
-  <div class="note">H.265 i AV1 nie mają narzędzi kodowania przeplotu, więc „interlaced” to klatki z przeplecionymi liniami kodowane jak zwykłe progresywne. W przeglądarce nie da się też włączyć trybu przeplotu (MBAFF) w H.264, bo WebCodecs nie udostępnia takich parametrów, więc także H.264 jest tu kodowany jak progresywny.</div>
-  <div class="note">Różnice względem notebooka z FFmpeg: koder to wbudowany koder przeglądarki (np. x264/libaom/OpenH264 lub sprzętowy), a nie libx264/libx265/SVT-AV1 z presetami. Nie ma też VMAF (brak biblioteki libvmaf w przeglądarce). PSNR to średnia z MSE trzech płaszczyzn YUV (jak w FFmpeg), SSIM liczony jest oknami 8×8 co 4 piksele na Y, U i V i ważony rozmiarem płaszczyzny. Wyniki są więc porównywalne wewnątrz tej strony, ale nie liczbowo identyczne z notebookiem.</div>
+  <div class="note">"Wzorzec" w trybie interlaced to bezstratna wersja z przeplotem (ma "grzebień" już przed kodowaniem); "czyste źródło" to ta sama scena bez przeplotu. Oba tryby mają <b>połowę klatek źródła</b> (np. 24 -&gt; 12 kl./s), więc ruch bywa "szarpany", co wynika z konstrukcji eksperymentu. Wersja interlaced powstaje z dwóch różnych klatek źródła (górne linie z jednej, dolne z drugiej).</div>
+  <div class="note">H.265 i AV1 nie mają narzędzi kodowania przeplotu, więc "interlaced" to klatki z przeplecionymi liniami kodowane jak zwykłe progresywne. W przeglądarce nie da się też włączyć trybu przeplotu (MBAFF) w H.264, bo WebCodecs nie udostępnia takich parametrów, więc także H.264 jest tu kodowany jak progresywny.</div>
+  <div class="note">Różnice względem notebooka z FFmpeg: koder to wbudowany koder przeglądarki (np. x264/libaom/OpenH264 lub sprzętowy), a nie libx264/libx265/SVT-AV1 z presetami. Nie ma też VMAF (brak biblioteki libvmaf w przeglądarce). PSNR to średnia z MSE trzech płaszczyzn YUV (jak w FFmpeg), SSIM liczony jest oknami 8x8 co 4 piksele na Y, U i V i ważony rozmiarem płaszczyzny.</div>
 </section>
 </main>
-<footer>Projekt: Hubert Cegielski, Bartłomiej Bartczak. Wersja przeglądarkowa działa bez serwera, wystarczy statyczny hosting (np. GitHub Pages).</footer>
+<footer>Autorzy projektu: Hubert Cegielski, Bartłomiej Bartczak | Wersja HTML/JS bez serwera (statyczny hosting)</footer>
+</div>
 
-<!-- ===================== RDZEŃ: czyste funkcje (bez DOM) ===================== -->
 <script id="core">
-// RGBA -> I420 (BT.601, zakres ograniczony). Zwraca Uint8ClampedArray w*h*3/2 (Y, U, V obok siebie).
 function rgbaToI420(d, w, h) {
   const out = new Uint8ClampedArray(w * h * 3 / 2), cw = w >> 1, ch = h >> 1, uo = w * h, vo = uo + cw * ch;
   for (let y = 0; y < h; y++) {
@@ -192,7 +210,6 @@ function rgbaToI420(d, w, h) {
   }
   return out;
 }
-// I420 -> RGBA (BT.601, zakres ograniczony); 'out' to Uint8ClampedArray (np. ImageData.data)
 function i420ToRgba(b, w, h, out) {
   const cw = w >> 1, uo = w * h, vo = uo + cw * (h >> 1);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
@@ -204,7 +221,6 @@ function i420ToRgba(b, w, h, out) {
     out[o + 3] = 255;
   }
 }
-// Sklejenie dwóch klatek w jedną z przeplotem: pierwsze półobrazy z A, drugie z B (jak filtr 'interlace').
 function weaveFields(A, B, w, h, tff, lowpass) {
   const out = new Uint8ClampedArray(A.length), firstParity = tff ? 0 : 1;
   const planes = [[0, w, h], [w * h, w >> 1, h >> 1], [w * h + (w >> 1) * (h >> 1), w >> 1, h >> 1]];
@@ -219,7 +235,6 @@ function weaveFields(A, B, w, h, tff, lowpass) {
   }
   return out;
 }
-// Średni MSE z trzech płaszczyzn
 function mseFrame(a, b, w, h) {
   const sizes = [[0, w * h], [w * h, (w >> 1) * (h >> 1)], [w * h + (w >> 1) * (h >> 1), (w >> 1) * (h >> 1)]];
   let tot = 0;
@@ -241,7 +256,6 @@ function ssimFrame(a, b, w, h) {
   const cw = w >> 1, ch = h >> 1, uo = w * h, vo = uo + cw * ch;
   return (4 * ssimPlane(a, b, 0, w, h) + ssimPlane(a, b, uo, cw, ch) + ssimPlane(a, b, vo, cw, ch)) / 6;
 }
-// Nagłówek Y4M
 function parseY4MHeader(u8) {
   let n = -1; for (let i = 0; i < Math.min(u8.length, 2048); i++) if (u8[i] === 10) { n = i; break; }
   if (n < 0) return null;
@@ -255,7 +269,6 @@ function parseY4MHeader(u8) {
   }
   return r.w && r.h ? r : null;
 }
-// Z bufora z copyTo() (z układem planów) do ciasno upakowanego I420
 function packPlanes(buf, layout, w, h, nv12) {
   const out = new Uint8Array(w * h * 3 / 2), cw = w >> 1, ch = h >> 1, l0 = layout[0];
   for (let y = 0; y < h; y++) out.set(buf.subarray(l0.offset + y * l0.stride, l0.offset + y * l0.stride + w), y * w);
@@ -272,7 +285,6 @@ function packPlanes(buf, layout, w, h, nv12) {
 }
 </script>
 
-<!-- ===================== APLIKACJA ===================== -->
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
@@ -287,7 +299,6 @@ const CODEC_STR = {
 const ST = { src: null, cache: null, stan: {}, hist: [], play: null, busy: false };
 const HAS_WC = typeof VideoEncoder !== "undefined" && typeof VideoDecoder !== "undefined" && typeof VideoFrame !== "undefined";
 
-/* ---------- UI: drobiazgi ---------- */
 function bindRange(id, out) { const e = $(id), o = $(out); const f = () => o.textContent = e.value; e.addEventListener("input", f); f(); }
 bindRange("kbps", "kbpsV"); bindRange("dlug", "dlugV"); bindRange("gain", "gainV");
 function setProg(f, txt) { $("prog").style.width = Math.round(f * 100) + "%"; if (txt != null) $("status").textContent = txt; }
@@ -304,27 +315,25 @@ function params() {
   };
 }
 
-/* ---------- Obsługa kodeków ---------- */
 async function pickConfig(codec, w, h, fps, kbps, o) {
   const prefs = o.hw === "no-preference" ? ["no-preference"] : [o.hw, "no-preference"];
   for (const hw of prefs) for (const c of CODEC_STR[codec]) {
     const cfg = { codec: c, width: w, height: h, bitrate: Math.round(kbps * 1000), framerate: fps,
       latencyMode: o.latency, bitrateMode: o.bmode, hardwareAcceleration: hw };
-    try { const r = await VideoEncoder.isConfigSupported(cfg); if (r.supported) return r.config; } catch (e) { /* następny */ }
+    try { const r = await VideoEncoder.isConfigSupported(cfg); if (r.supported) return r.config; } catch (e) {}
   }
   return null;
 }
 async function checkSupport() {
   const box = $("support"); box.innerHTML = "";
-  if (!HAS_WC) { $("nosupport").hidden = false; box.innerHTML = '<span class="badge no">WebCodecs: brak</span>'; return; }
+  if (!HAS_WC) { $("nosupport").hidden = false; box.innerHTML = '<span class="badge no">[WebCodecs: BRAK]</span>'; return; }
   for (const k of Object.keys(CODEC_STR)) {
     const c = await pickConfig(k, 1280, 720, 12, 1000, { hw: "no-preference", latency: "quality", bmode: "variable" });
     const s = document.createElement("span"); s.className = "badge " + (c ? "ok" : "no");
-    s.textContent = k + (c ? " ✓ kodowanie dostępne" : " ✗ brak w tej przeglądarce"); box.appendChild(s);
+    s.textContent = "[" + k + (c ? ": OK]" : ": BRAK]"); box.appendChild(s);
   }
 }
 
-/* ---------- Źródło ---------- */
 function clearSrc() {
   if (ST.src && ST.src.url) URL.revokeObjectURL(ST.src.url);
   if (ST.src && ST.src.el) ST.src.el.remove();
@@ -332,7 +341,7 @@ function clearSrc() {
 }
 async function loadFile(file) {
   stopPlay(); clearSrc(); setBusy(true);
-  $("srcInfo").textContent = "Wczytuję…";
+  $("srcInfo").textContent = "Wczytywanie pliku...";
   try {
     if (/\.y4m$/i.test(file.name)) {
       const hdr = parseY4MHeader(new Uint8Array(await file.slice(0, 4096).arrayBuffer()));
@@ -352,12 +361,12 @@ async function loadFile(file) {
       await new Promise((res, rej) => { v.onloadeddata = res; v.onerror = () => rej(new Error("Przeglądarka nie umie odtworzyć tego pliku. Użyj mp4 (H.264), webm albo y4m.")); });
       ST.src = { kind: "video", file, name: file.name, el: v, url, w: v.videoWidth, h: v.videoHeight, dur: v.duration, fps: 25 };
       $("fps").disabled = false;
-      $("srcInfo").textContent = "Wykrywam liczbę klatek/s…";
+      $("srcInfo").textContent = "Wykrywam liczbę klatek/s...";
       const f = await detectFps(v); ST.src.fps = f || 25; $("fps").value = ST.src.fps;
     }
     const s = ST.src;
-    $("srcInfo").innerHTML = `<b>${s.name}</b> · ${s.w}×${s.h} · ${(+s.fps).toFixed(3)} kl./s · ${s.dur.toFixed(1)} s` +
-      (s.kind === "video" ? " · fps wykryte automatycznie, popraw w polu jeśli się myli" : ` · ${s.count} klatek`);
+    $("srcInfo").innerHTML = `<b>${s.name}</b> | ${s.w}x${s.h} | ${(+s.fps).toFixed(3)} kl./s | ${s.dur.toFixed(1)} s` +
+      (s.kind === "video" ? " | fps wykryte automatycznie, popraw w polu jeśli się myli" : ` | ${s.count} klatek`);
   } catch (e) { clearSrc(); $("srcInfo").textContent = "Błąd: " + e.message; }
   setBusy(false);
 }
@@ -402,12 +411,11 @@ async function y4mFrameToCanvas(src, idx, ctx, W, H, tmp) {
   tmp.width = w; tmp.height = h; tmp.getContext("2d").putImageData(id, 0, 0);
   ctx.drawImage(tmp, 0, 0, W, H);
 }
-// Klatki źródłowe jako I420 (liczba parzysta), z cache dla identycznych parametrów
 async function getSourceFrames(p, onProg) {
   const s = ST.src, fps = s.kind === "y4m" ? s.fps : p.fps;
   const eff = Math.min(p.dlugosc, s.dur - p.start);
   const N = Math.floor(eff * fps / 2);
-  if (N < 2) throw new Error("Za krótki fragment (zmniejsz „Początek” albo zwiększ długość).");
+  if (N < 2) throw new Error("Za krótki fragment (zmniejsz Początek albo zwiększ długość).");
   let W = p.szer ? Math.min(p.szer, s.w) : s.w; W -= W % 4;
   const H = Math.max(Math.round(W * s.h / s.w / 4) * 4, 4), M = 2 * N;
   if (M * W * H * 1.5 > 900e6) throw new Error("Za dużo pamięci: zmniejsz szerokość lub długość fragmentu.");
@@ -432,10 +440,9 @@ async function getSourceFrames(p, onProg) {
   return (ST.cache = { key, frames, w: W, h: H, fps });
 }
 
-/* ---------- Kodowanie i dekodowanie (WebCodecs) ---------- */
 async function encodeFrames(frames, w, h, fps, codec, kbps, o, onProg) {
   const config = await pickConfig(codec, w, h, fps, kbps, o);
-  if (!config) throw new Error(`${codec}: ta przeglądarka nie potrafi kodować tym kodekiem (${w}×${h}). Spróbuj innej akceleracji, mniejszej szerokości albo innej przeglądarki.`);
+  if (!config) throw new Error(`${codec}: ta przeglądarka nie potrafi kodować tym kodekiem (${w}x${h}). Spróbuj innej akceleracji, mniejszej szerokości albo innej przeglądarki.`);
   const chunks = []; let decCfg = null, err = null;
   const enc = new VideoEncoder({
     output: (c, m) => { const d = new Uint8Array(c.byteLength); c.copyTo(d); chunks.push({ type: c.type, timestamp: c.timestamp, duration: c.duration || 0, data: d }); if (m && m.decoderConfig && !decCfg) decCfg = m.decoderConfig; },
@@ -453,7 +460,7 @@ async function encodeFrames(frames, w, h, fps, codec, kbps, o, onProg) {
   }
   if (!err) await enc.flush();
   const sec = (performance.now() - t0) / 1000;
-  try { enc.close(); } catch (e) { /* już zamknięty */ }
+  try { enc.close(); } catch (e) {}
   if (err) throw new Error("Błąd kodera: " + err.message);
   return { chunks, decCfg, config, sec, bytes: chunks.reduce((a, c) => a + c.data.byteLength, 0) };
 }
@@ -480,16 +487,15 @@ async function decodeChunks(enc, w, h) {
   dec.configure(cfg);
   for (const c of enc.chunks) { dec.decode(new EncodedVideoChunk({ type: c.type, timestamp: c.timestamp, duration: c.duration, data: c.data })); while (dec.decodeQueueSize > 4 && !err) await new Promise(r => setTimeout(r, 4)); }
   if (!err) await dec.flush();
-  try { dec.close(); } catch (e) { /* ok */ }
+  try { dec.close(); } catch (e) {}
   await Promise.all(pend);
   if (err) throw new Error("Błąd dekodera: " + err.message);
   out.sort((a, b) => a.ts - b.ts);
   return out.map(o => o.b);
 }
 
-/* ---------- Eksperyment ---------- */
 async function runExperiment(p, tryb, keep, label) {
-  const stage = (txt) => (i, n) => setProg(i / n, `${label} · ${txt} ${i}/${n}`);
+  const stage = (txt) => (i, n) => setProg(i / n, `${label} - ${txt} ${i}/${n}`);
   const src = await getSourceFrames(p, stage("wczytywanie klatek"));
   const { frames, w, h, fps } = src, N = frames.length >> 1, fo = fps / 2;
   let ref;
@@ -498,14 +504,14 @@ async function runExperiment(p, tryb, keep, label) {
     for (let k = 0; k < N; k++) { ref.push(weaveFields(frames[2 * k], frames[2 * k + 1], w, h, p.kolej === "tff", p.lowpass)); if (k % 4 === 3) await sleep0(); }
   } else ref = Array.from({ length: N }, (_, k) => frames[2 * k]);
   const enc = await encodeFrames(ref, w, h, fo, p.kodek, p.kbps, p, stage("kodowanie"));
-  setProg(1, `${label} · dekodowanie…`); await sleep0();
+  setProg(1, `${label} - dekodowanie...`); await sleep0();
   const dec = await decodeChunks(enc, w, h);
   const n = Math.min(ref.length, dec.length);
   if (n < 2) throw new Error("Dekoder zwrócił za mało klatek (" + dec.length + ").");
   const psnr = [], ssim = []; let mseSum = 0;
   for (let k = 0; k < n; k++) {
     const m = mseFrame(ref[k], dec[k], w, h); mseSum += m; psnr.push(psnrFromMse(m)); ssim.push(ssimFrame(ref[k], dec[k], w, h));
-    setProg(k / n, `${label} · metryki ${k + 1}/${n}`); if (k % 3 === 2) await sleep0();
+    setProg(k / n, `${label} - metryki ${k + 1}/${n}`); if (k % 3 === 2) await sleep0();
   }
   const wiersz = {
     sekwencja: ST.src.name.replace(/\.[^.]+$/, ""), tryb, kodek: p.kodek, bitrate_zadany: p.kbps,
@@ -525,7 +531,7 @@ async function onRun() {
   try {
     const stan = {}, rows = [];
     for (const m of modes) {
-      const r = await runExperiment(p, m, true, `${p.kodek} · ${m}`);
+      const r = await runExperiment(p, m, true, `${p.kodek} (${m})`);
       stan[m] = r; rows.push(r.wiersz); ST.hist.push(r.wiersz);
     }
     ST.stan = stan; setProg(1, "Gotowe.");
@@ -544,7 +550,7 @@ async function onBatch() {
   try {
     for (const tryb of ["progressive", "interlaced"]) for (const kodek of codecs) for (const kbps of rates) {
       k++;
-      try { const r = await runExperiment({ ...base, kodek, kbps }, tryb, false, `[${k}/${total}] ${kodek} · ${tryb} · ${kbps} kb/s`); ST.hist.push(r.wiersz); }
+      try { const r = await runExperiment({ ...base, kodek, kbps }, tryb, false, `[${k}/${total}] ${kodek} (${tryb}) ${kbps} kb/s`); ST.hist.push(r.wiersz); }
       catch (e) { skipped.push(`${kodek}: ${e.message}`); if (/nie potrafi kodować/.test(e.message)) { codecs.splice(codecs.indexOf(kodek), 1); } }
       renderHistory();
     }
@@ -553,7 +559,6 @@ async function onBatch() {
   setBusy(false);
 }
 
-/* ---------- Tabele, historia ---------- */
 function tableHtml(rows, hide = []) {
   if (!rows.length) return "";
   const cols = Object.keys(rows[0]).filter(c => !hide.includes(c));
@@ -586,36 +591,36 @@ function downloadCsv() {
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 
-/* ---------- Wykresy liniowe (canvas) ---------- */
 function lineChart(cv, series, o = {}) {
   const dpr = window.devicePixelRatio || 1, W = cv.clientWidth || 320, H = +cv.dataset.h || 200;
   cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.height = H + "px";
   const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const css = getComputedStyle(document.documentElement), fg = css.getPropertyValue("--fg").trim(), gr = css.getPropertyValue("--line").trim(), mu = css.getPropertyValue("--muted").trim();
-  g.font = "11px ui-monospace,Consolas,monospace"; g.clearRect(0, 0, W, H);
-  g.fillStyle = fg; g.fillText(o.title || "", 8, 13);
+  g.fillStyle = "#ffffff"; g.fillRect(0, 0, W, H);
+  g.font = "bold 11px 'Courier New',Courier,monospace";
+  g.fillStyle = "#000080"; g.fillText(o.title || "", 8, 14);
+  g.font = "11px 'Courier New',Courier,monospace";
   const pts = series.flatMap(s => s.pts);
-  if (!pts.length) { g.fillStyle = mu; g.fillText("brak danych", 10, 40); return; }
+  if (!pts.length) { g.fillStyle = "#666666"; g.fillText("[ brak danych ]", 10, 42); return; }
   let x0 = Math.min(...pts.map(p => p[0])), x1 = Math.max(...pts.map(p => p[0])), y0 = Math.min(...pts.map(p => p[1])), y1 = Math.max(...pts.map(p => p[1]));
   if (x0 === x1) { x0 -= 1; x1 += 1; } if (y0 === y1) { y0 -= 1e-3; y1 += 1e-3; }
   const py = (y1 - y0) * 0.08; y0 -= py; y1 += py;
-  const L = 50, R = 10, T = 22, B = 26, X = x => L + (x - x0) / (x1 - x0) * (W - L - R), Y = y => H - B - (y - y0) / (y1 - y0) * (H - T - B);
+  const L = 52, R = 10, T = 24, B = 26, X = x => L + (x - x0) / (x1 - x0) * (W - L - R), Y = y => H - B - (y - y0) / (y1 - y0) * (H - T - B);
   const dec = (y1 - y0) < 0.5 ? 3 : (y1 - y0) < 5 ? 2 : 1;
-  g.strokeStyle = gr; g.fillStyle = mu; g.lineWidth = 1; g.setLineDash([]);
+  g.strokeStyle = "#cccccc"; g.fillStyle = "#000000"; g.lineWidth = 1; g.setLineDash([]);
   for (let i = 0; i <= 4; i++) {
     const yv = y0 + (y1 - y0) * i / 4, xv = x0 + (x1 - x0) * i / 4;
     g.beginPath(); g.moveTo(L, Y(yv)); g.lineTo(W - R, Y(yv)); g.stroke(); g.fillText(yv.toFixed(dec), 4, Y(yv) + 4);
     g.fillText(Math.round(xv), X(xv) - 8, H - 10);
   }
+  g.strokeStyle = "#000000"; g.beginPath(); g.moveTo(L, T); g.lineTo(L, H - B); g.lineTo(W - R, H - B); g.stroke();
   for (const s of series) {
-    g.strokeStyle = s.color || fg; g.fillStyle = s.color || fg; g.lineWidth = 2; g.setLineDash(s.dash || []); g.beginPath();
+    g.strokeStyle = s.color || "#000000"; g.fillStyle = s.color || "#000000"; g.lineWidth = 2; g.setLineDash(s.dash || []); g.beginPath();
     s.pts.forEach((p, i) => i ? g.lineTo(X(p[0]), Y(p[1])) : g.moveTo(X(p[0]), Y(p[1]))); g.stroke();
-    if (s.pts.length < 30) { g.setLineDash([]); for (const p of s.pts) { g.beginPath(); g.arc(X(p[0]), Y(p[1]), 3, 0, 7); g.fill(); } }
+    if (s.pts.length < 30) { g.setLineDash([]); for (const p of s.pts) { g.fillRect(X(p[0]) - 2.5, Y(p[1]) - 2.5, 5, 5); } }
   }
-  if (o.cursor != null) { g.setLineDash([]); g.strokeStyle = "#e0392b"; g.beginPath(); g.moveTo(X(o.cursor), T); g.lineTo(X(o.cursor), H - B); g.stroke(); }
+  if (o.cursor != null) { g.setLineDash([]); g.strokeStyle = "#cc0000"; g.lineWidth = 1.5; g.beginPath(); g.moveTo(X(o.cursor), T); g.lineTo(X(o.cursor), H - B); g.stroke(); }
 }
 
-/* ---------- Przeglądarka klatek ---------- */
 let panelCount = 0;
 function initViewer() {
   const keys = Object.keys(ST.stan); if (!keys.length) return;
@@ -636,12 +641,12 @@ function ensurePanels(nc) {
 function renderViewer() {
   const s = ST.stan[$("vWidok").value]; if (!s) return;
   const k = Math.min(+$("vK").value, s.n - 1), gain = +$("vGain").value, { w, h } = s;
-  $("vKV").textContent = k; $("vInfo").textContent = `Widok: ${s.tryb} · klatka ${k} z ${s.n - 1} · ${s.fo.toFixed(2)} kl./s`;
+  $("vKV").textContent = k; $("vInfo").textContent = `Widok: ${s.tryb} | klatka ${k} z ${s.n - 1} | ${s.fo.toFixed(2)} kl./s`;
   const mk = buf => { const id = new ImageData(w, h); i420ToRgba(buf, w, h, id.data); return id; };
   const a = mk(s.ref[k]), b = mk(s.enc[k]), d = new ImageData(w, h);
   for (let i = 0; i < d.data.length; i += 4) { for (let c = 0; c < 3; c++) d.data[i + c] = Math.abs(a.data[i + c] - b.data[i + c]) * gain; d.data[i + 3] = 255; }
   const panels = []; if (s.clean) panels.push(["Czyste źródło (progressive)", mk(s.clean[k])]);
-  panels.push([`Wzorzec (${s.tryb}, przed kodowaniem)`, a], ["Po kodowaniu", b], [`Różnica ×${gain}`, d]);
+  panels.push([`Wzorzec (${s.tryb}, przed kodowaniem)`, a], ["Po kodowaniu", b], [`Różnica x${gain}`, d]);
   ensurePanels(panels.length);
   const size = +$("vS").value / 100, cw = Math.max(Math.round(w * size), 8), ch = Math.max(Math.round(cw * h / w), 8);
   const x0 = Math.round((w - cw) * $("vX").value / 100), y0 = Math.round((h - ch) * $("vY").value / 100);
@@ -650,24 +655,23 @@ function renderViewer() {
     const f = el.querySelector("canvas.f"), z = el.querySelector("canvas.z");
     f.width = w; f.height = h; const fc = f.getContext("2d"); fc.putImageData(panels[i][1], 0, 0);
     z.width = cw; z.height = ch; const zc = z.getContext("2d"); zc.imageSmoothingEnabled = false; zc.drawImage(f, x0, y0, cw, ch, 0, 0, cw, ch);
-    fc.strokeStyle = "#ffd400"; fc.lineWidth = Math.max(1, w / 400); fc.strokeRect(x0, y0, cw, ch);
+    fc.strokeStyle = "#ffff00"; fc.lineWidth = Math.max(1, w / 400); fc.strokeRect(x0, y0, cw, ch);
   });
   lineChart($("fcPSNR"), [{ color: kolor("H.264"), pts: s.klatki.PSNR.map((v, i) => [i, v]) }], { title: `PSNR na klatkę (średnia ${s.klatki.PSNR.length ? (s.klatki.PSNR.reduce((x, y) => x + y, 0) / s.n).toFixed(2) : "-"} dB)`, cursor: k });
   lineChart($("fcSSIM"), [{ color: kolor("H.265"), pts: s.klatki.SSIM.map((v, i) => [i, v]) }], { title: `SSIM na klatkę (średnia ${(s.klatki.SSIM.reduce((x, y) => x + y, 0) / s.n).toFixed(4)})`, cursor: k });
 }
-function stopPlay() { if (ST.play) { clearInterval(ST.play); ST.play = null; $("play").textContent = "▶ odtwarzaj w pętli"; } }
+function stopPlay() { if (ST.play) { clearInterval(ST.play); ST.play = null; $("play").textContent = "Odtwarzaj w pętli"; } }
 function togglePlay() {
   if (ST.play) return stopPlay();
   const s = ST.stan[$("vWidok").value]; if (!s) return;
-  $("play").textContent = "⏸ pauza";
+  $("play").textContent = "Pauza";
   ST.play = setInterval(() => { const k = (+$("vK").value + 1) % s.n; $("vK").value = k; renderViewer(); }, 1000 / Math.min(Math.max(s.fo, 1), 30));
 }
 
-/* ---------- Zdarzenia ---------- */
 $("file").addEventListener("change", e => e.target.files[0] && loadFile(e.target.files[0]));
 $("btnRepo").addEventListener("click", async () => {
   try {
-    $("srcInfo").textContent = "Pobieram sekwencje/hall_monitor.y4m z repozytorium…";
+    $("srcInfo").textContent = "Pobieram sekwencje/hall_monitor.y4m z repozytorium...";
     const r = await fetch("sekwencje/hall_monitor.y4m"); if (!r.ok) throw new Error("nie znaleziono pliku (HTTP " + r.status + ")");
     await loadFile(new File([await r.blob()], "hall_monitor.y4m"));
   } catch (e) { $("srcInfo").textContent = "Błąd: " + e.message + ". Wrzuć plik do folderu sekwencje/ w repozytorium albo wybierz go z dysku."; }
@@ -682,7 +686,7 @@ $("prev").addEventListener("click", () => { $("vK").value = Math.max(0, +$("vK")
 $("next").addEventListener("click", () => { $("vK").value = Math.min(+$("vK").max, +$("vK").value + 1); renderViewer(); });
 $("play").addEventListener("click", togglePlay);
 let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => { renderHistory(); renderViewer(); }, 150); });
-try { $("notes").value = localStorage.getItem("wnioski") || ""; $("notes").addEventListener("input", () => { try { localStorage.setItem("wnioski", $("notes").value); } catch (e) { /* brak miejsca */ } }); } catch (e) { /* storage zablokowany */ }
+try { $("notes").value = localStorage.getItem("wnioski") || ""; $("notes").addEventListener("input", () => { try { localStorage.setItem("wnioski", $("notes").value); } catch (e) {} }); } catch (e) {}
 renderHistory(); checkSupport();
 </script>
 </body>
