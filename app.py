@@ -206,7 +206,7 @@ def encode_video():
             except RuntimeError as e:
                 return jsonify({"error": f"Blad przygotowania czystego zrodla: {e}"}), 500
 
-        enc_cmd = ["ffmpeg", "-y", "-i", ref_path, "-threads", "2"]
+        enc_cmd = ["ffmpeg", "-y", "-i", ref_path, "-threads", "1"]
 
         if kodek == "H.264":
             preset = "ultrafast" if latency == "realtime" else "medium"
@@ -225,7 +225,7 @@ def encode_video():
                 enc_cmd += ["-c:v", "libsvtav1", "-preset", preset]
             else:
                 cpu_used = "8" if latency == "realtime" else "4"
-                enc_cmd += ["-c:v", "libaom-av1", "-cpu-used", cpu_used, "-row-mt", "1"]
+                enc_cmd += ["-c:v", "libaom-av1", "-cpu-used", cpu_used]
 
         enc_cmd += ["-b:v", f"{kbps}k"]
         if bmode == "constant":
@@ -251,4 +251,59 @@ def encode_video():
 
         with open(psnr_log, "r", encoding="utf-8") as fp:
             psnr_vals = [100.0 if v == "inf" else float(v) for v in re.findall(r"psnr_avg:([0-9.]+|inf)", fp.read())]
-        with open(ssim_log, "r", encoding="utf-
+        with open(ssim_log, "r", encoding="utf-8") as fs:
+            ssim_vals = [float(v) for v in re.findall(r"All:([0-9.]+)", fs.read())]
+
+        n_frames = len(psnr_vals)
+        if n_frames == 0:
+            return jsonify({"error": "Nie udalo sie odczytac metryk z klatek."}), 500
+
+        size_bytes = os.path.getsize(out_path)
+        actual_dur = max(n_frames / out_fps, 1e-6)
+        actual_kbps = round((size_bytes * 8.0) / actual_dur / 1000.0, 1)
+
+        row = {
+            "sekwencja": os.path.splitext(src_name)[0],
+            "tryb": tryb,
+            "kodek": kodek,
+            "bitrate_zadany": kbps,
+            "bitrate_rzecz": actual_kbps,
+            "tempo": f"{latency}/{'CBR' if bmode == 'constant' else 'VBR'}",
+            "PSNR": round(sum(psnr_vals) / n_frames, 2),
+            "SSIM": round(sum(ssim_vals) / n_frames, 4),
+            "czas_kodowania_s": round(encode_sec, 2),
+            "rozmiar_MB": round(size_bytes / 1e6, 3),
+        }
+
+        payload = {
+            "wiersz": row,
+            "tryb": tryb,
+            "n": n_frames,
+            "fo": out_fps,
+            "klatki": {"PSNR": psnr_vals, "SSIM": ssim_vals},
+        }
+
+        if keep:
+            run_cmd(["ffmpeg", "-y", "-i", ref_path, "-vframes", "30", os.path.join(tmpdir, "ref_%04d.png")])
+            run_cmd(["ffmpeg", "-y", "-i", out_path, "-vframes", "30", os.path.join(tmpdir, "enc_%04d.png")])
+            ref_urls, w, h = png_list_to_data_urls(os.path.join(tmpdir, "ref_*.png"))
+            enc_urls, _, _ = png_list_to_data_urls(os.path.join(tmpdir, "enc_*.png"))
+            clean_urls = None
+            if tryb == "interlaced" and os.path.exists(clean_path):
+                run_cmd(["ffmpeg", "-y", "-i", clean_path, "-vframes", "30", os.path.join(tmpdir, "clean_%04d.png")])
+                clean_urls, _, _ = png_list_to_data_urls(os.path.join(tmpdir, "clean_*.png"))
+            m = min(len(ref_urls), len(enc_urls), n_frames)
+            payload["n"] = m
+            payload["w"] = w
+            payload["h"] = h
+            payload["ref_urls"] = ref_urls[:m]
+            payload["enc_urls"] = enc_urls[:m]
+            payload["clean_urls"] = clean_urls[:m] if clean_urls else None
+            payload["klatki"]["PSNR"] = psnr_vals[:m]
+            payload["klatki"]["SSIM"] = ssim_vals[:m]
+
+        return jsonify(payload)
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8000)
