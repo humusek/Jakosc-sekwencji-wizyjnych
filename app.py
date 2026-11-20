@@ -8,7 +8,7 @@ import tempfile
 import time
 from flask import Flask, jsonify, request, send_from_directory
 
-app = Flask(__name__, static_folder="static")
+app = Flask(__name__)
 
 
 def run_cmd(cmd):
@@ -41,12 +41,12 @@ def resolve_input_file(tmpdir):
         return in_path, src_name
     repo_rel = request.form.get("repo_file", "sekwencje/hall_monitor.y4m")
     src_name = os.path.basename(repo_rel)
-    in_path = os.path.abspath(repo_rel)
-    if not os.path.exists(in_path):
-        raise FileNotFoundError(
-            f"Nie znaleziono pliku {repo_rel} w repozytorium. Wgraj plik wideo z dysku albo dodaj go do folderu sekwencje/."
-        )
-    return in_path, src_name
+    for candidate in (repo_rel, src_name):
+        if os.path.exists(candidate):
+            return os.path.abspath(candidate), src_name
+    raise FileNotFoundError(
+        f"Nie znaleziono pliku {src_name} w repozytorium. Wgraj plik wideo z dysku."
+    )
 
 
 def png_list_to_data_urls(pattern):
@@ -64,12 +64,21 @@ def png_list_to_data_urls(pattern):
 
 @app.route("/")
 def index():
-    return send_from_directory("static", "index.html")
+    for candidate in ("index.html", "page.html"):
+        if os.path.exists(candidate):
+            return send_from_directory(".", candidate)
+    if os.path.exists(os.path.join("static", "index.html")):
+        return send_from_directory("static", "index.html")
+    return "Brak pliku index.html lub page.html w katalogu glownym.", 404
 
 
 @app.route("/sekwencje/<path:filename>")
 def sequences(filename):
-    return send_from_directory("sekwencje", filename)
+    if os.path.exists(os.path.join("sekwencje", filename)):
+        return send_from_directory("sekwencje", filename)
+    if os.path.exists(filename):
+        return send_from_directory(".", filename)
+    return "Nie znaleziono pliku.", 404
 
 
 @app.route("/api/encoders", methods=["GET"])
@@ -94,7 +103,7 @@ def probe_video():
         try:
             proc = run_cmd(cmd)
         except RuntimeError as e:
-            return jsonify({"error": f"Nie udało się odczytać parametrów wideo: {e}"}), 400
+            return jsonify({"error": f"Nie udalo sie odczytac parametrow wideo: {e}"}), 400
 
         info = {}
         for line in proc.stdout.splitlines():
@@ -152,7 +161,7 @@ def encode_video():
 
     encs = get_available_encoders()
     if not encs.get(kodek):
-        return jsonify({"error": f"Koder {kodek} nie jest dostępny w tej instalacji FFmpeg."}), 400
+        return jsonify({"error": f"Koder {kodek} nie jest dostepny w tej instalacji FFmpeg."}), 400
 
     with tempfile.TemporaryDirectory() as tmpdir:
         try:
@@ -183,7 +192,7 @@ def encode_video():
         try:
             run_cmd(ref_cmd)
         except RuntimeError as e:
-            return jsonify({"error": f"Błąd przygotowania wzorca: {e}"}), 500
+            return jsonify({"error": f"Blad przygotowania wzorca: {e}"}), 500
 
         if keep and tryb == "interlaced":
             clean_filters = base_scale + [f"select='not(mod(n\\,2))',setpts=N/({out_fps}*TB)"]
@@ -195,7 +204,7 @@ def encode_video():
             try:
                 run_cmd(clean_cmd)
             except RuntimeError as e:
-                return jsonify({"error": f"Błąd przygotowania czystego źródła: {e}"}), 500
+                return jsonify({"error": f"Blad przygotowania czystego zrodla: {e}"}), 500
 
         enc_cmd = ["ffmpeg", "-y", "-i", ref_path, "-threads", "2"]
 
@@ -227,7 +236,7 @@ def encode_video():
         try:
             run_cmd(enc_cmd)
         except RuntimeError as e:
-            return jsonify({"error": f"Błąd kodera {kodek}: {e}"}), 500
+            return jsonify({"error": f"Blad kodera {kodek}: {e}"}), 500
         encode_sec = time.perf_counter() - t0
 
         metric_cmd = [
@@ -238,63 +247,8 @@ def encode_video():
         try:
             run_cmd(metric_cmd)
         except RuntimeError as e:
-            return jsonify({"error": f"Błąd obliczania metryk: {e}"}), 500
+            return jsonify({"error": f"Blad obliczania metryk: {e}"}), 500
 
         with open(psnr_log, "r", encoding="utf-8") as fp:
             psnr_vals = [100.0 if v == "inf" else float(v) for v in re.findall(r"psnr_avg:([0-9.]+|inf)", fp.read())]
-        with open(ssim_log, "r", encoding="utf-8") as fs:
-            ssim_vals = [float(v) for v in re.findall(r"All:([0-9.]+)", fs.read())]
-
-        n_frames = len(psnr_vals)
-        if n_frames == 0:
-            return jsonify({"error": "Nie udało się odczytać metryk z klatek."}), 500
-
-        size_bytes = os.path.getsize(out_path)
-        actual_dur = max(n_frames / out_fps, 1e-6)
-        actual_kbps = round((size_bytes * 8.0) / actual_dur / 1000.0, 1)
-
-        row = {
-            "sekwencja": os.path.splitext(src_name)[0],
-            "tryb": tryb,
-            "kodek": kodek,
-            "bitrate_zadany": kbps,
-            "bitrate_rzecz": actual_kbps,
-            "tempo": f"{latency}/{'CBR' if bmode == 'constant' else 'VBR'}",
-            "PSNR": round(sum(psnr_vals) / n_frames, 2),
-            "SSIM": round(sum(ssim_vals) / n_frames, 4),
-            "czas_kodowania_s": round(encode_sec, 2),
-            "rozmiar_MB": round(size_bytes / 1e6, 3),
-        }
-
-        payload = {
-            "wiersz": row,
-            "tryb": tryb,
-            "n": n_frames,
-            "fo": out_fps,
-            "klatki": {"PSNR": psnr_vals, "SSIM": ssim_vals},
-        }
-
-        if keep:
-            run_cmd(["ffmpeg", "-y", "-i", ref_path, "-vframes", "60", os.path.join(tmpdir, "ref_%04d.png")])
-            run_cmd(["ffmpeg", "-y", "-i", out_path, "-vframes", "60", os.path.join(tmpdir, "enc_%04d.png")])
-            ref_urls, w, h = png_list_to_data_urls(os.path.join(tmpdir, "ref_*.png"))
-            enc_urls, _, _ = png_list_to_data_urls(os.path.join(tmpdir, "enc_*.png"))
-            clean_urls = None
-            if tryb == "interlaced" and os.path.exists(clean_path):
-                run_cmd(["ffmpeg", "-y", "-i", clean_path, "-vframes", "60", os.path.join(tmpdir, "clean_%04d.png")])
-                clean_urls, _, _ = png_list_to_data_urls(os.path.join(tmpdir, "clean_*.png"))
-            m = min(len(ref_urls), len(enc_urls), n_frames)
-            payload["n"] = m
-            payload["w"] = w
-            payload["h"] = h
-            payload["ref_urls"] = ref_urls[:m]
-            payload["enc_urls"] = enc_urls[:m]
-            payload["clean_urls"] = clean_urls[:m] if clean_urls else None
-            payload["klatki"]["PSNR"] = psnr_vals[:m]
-            payload["klatki"]["SSIM"] = ssim_vals[:m]
-
-        return jsonify(payload)
-
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000)
+        with open(ssim_log, "r", encoding="utf-
