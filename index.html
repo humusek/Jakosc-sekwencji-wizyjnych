@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jakość wideo: przeplot i kodek (H.264 - H.265 - AV1)</title>
+<style>
+:root{
+  --bg:#c0c0c0; --panel:#d4d0c8; --fg:#000000; --muted:#333333; --line:#808080;
+  --accent:#000080; --accent-fg:#ffffff; --ok:#006600; --bad:#990000;
+  --c264:#0000cc; --c265:#007700; --cav1:#cc0000;
+  --mono:"Courier New",Courier,monospace;
+  --serif:"Times New Roman",Times,Georgia,serif;
+  --ui:"MS Sans Serif",Tahoma,Verdana,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:8px}
+body{margin:0;padding:12px;background:var(--bg);color:var(--fg);font:14px/1.45 var(--serif)}
+.wrap{max-width:1120px;margin:0 auto;background:var(--panel);border:2px outset #ffffff;padding:4px}
+header{background:var(--panel);border-bottom:2px groove #ffffff;padding:0 0 12px 0;margin-bottom:12px}
+.titlebar{background:var(--accent);color:var(--accent-fg);padding:5px 10px;font:bold 13px var(--ui);letter-spacing:.02em;display:flex;justify-content:space-between;align-items:center}
+header .in{padding:12px 14px 2px}
+h1{font:bold 24px/1.2 var(--serif);margin:0 0 8px;color:#000080}
+h1 span{text-decoration:underline}
+header p{margin:4px 0;max-width:85ch;color:var(--fg);font-size:14px}
+main{padding:0 10px 14px}
+section{background:var(--panel);border:2px groove #ffffff;padding:14px 16px;margin:14px 0}
+h2{font:bold 15px var(--serif);text-transform:uppercase;margin:0 0 12px;padding-bottom:4px;border-bottom:2px groove #ffffff;color:#000080;letter-spacing:.04em}
+h3{font:bold 14px var(--serif);margin:16px 0 6px;color:#000080}
+label{display:block;font:bold 12px var(--ui);color:var(--fg);margin-bottom:4px}
+input,select,textarea,button{font:13px var(--ui);color:var(--fg)}
+input[type=number],input[type=text],select,textarea{
+  width:100%;padding:4px 6px;background:#ffffff;color:#000000;
+  border:2px inset #808080;border-radius:0;font-family:var(--mono)
+}
+input:disabled,select:disabled{background:#e0e0e0;color:#555555}
+input[type=range]{width:100%;accent-color:#000080;margin:4px 0}
+input[type=file]{width:100%;background:#ffffff;border:2px inset #808080;padding:3px;font-family:var(--mono);font-size:12px}
+textarea{min-height:180px;resize:vertical;font-family:var(--mono);line-height:1.45}
+button{
+  padding:5px 12px;background:var(--panel);color:#000000;
+  border:2px outset #ffffff;border-radius:0;font:13px var(--ui);cursor:pointer
+}
+button:hover:not(:disabled){background:#dfdcd5}
+button:active:not(:disabled){border-style:inset;padding:6px 11px 4px 13px}
+button:disabled{color:#777777;cursor:default}
+button.primary{font-weight:bold;padding:6px 18px;outline:1px solid #000000}
+.grid{display:grid;gap:12px 16px;grid-template-columns:repeat(auto-fill,minmax(195px,1fr))}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.muted{color:var(--muted);font-size:13px}
+.mono{font-family:var(--mono)}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 0}
+.badge{font:bold 12px var(--mono);padding:3px 8px;background:#ffffff;border:2px inset #808080}
+.badge.ok{color:var(--ok);background:#eeffee}
+.badge.no{color:var(--bad);background:#ffeeee}
+.note{font:13px/1.45 var(--serif);color:#000000;background:#ffffe1;border:1px solid #808080;padding:7px 10px;margin:10px 0}
+.bar{height:20px;background:#ffffff;border:2px inset #808080;padding:2px;margin-top:12px}
+.bar i{display:block;height:100%;width:0;background:repeating-linear-gradient(90deg,#000080 0 10px,#d4d0c8 10px 12px);transition:width .15s}
+.tablewrap{overflow-x:auto;margin-top:12px;background:#ffffff;border:2px inset #808080}
+.tablewrap:empty{display:none}
+table{border-collapse:collapse;width:100%;font:12.5px var(--mono)}
+th,td{padding:4px 8px;text-align:right;border:1px solid #808080;white-space:nowrap}
+th{background:#000080;color:#ffffff;font-weight:bold}
+th:first-child,td:first-child{text-align:left}
+tbody tr:nth-child(even){background:#f2f2f2}
+.panels{display:grid;gap:10px;margin-top:12px}
+.pn{min-width:0;background:#c8c4bc;border:2px groove #ffffff;padding:6px}
+.pn .t{font:bold 12px var(--ui);color:#000080;margin-bottom:4px}
+.pn canvas{width:100%;display:block;background:#000000;border:2px inset #808080}
+.pn canvas.z{image-rendering:pixelated;margin-top:6px}
+.charts{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));margin-top:12px}
+.charts canvas{width:100%;display:block;background:#ffffff;border:2px inset #808080}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font:12px var(--mono);margin-top:8px;background:#ffffff;border:2px inset #808080;padding:5px 8px}
+.legend:empty{display:none}
+.legend i{display:inline-block;width:18px;height:0;border-top:3px solid;vertical-align:middle;margin-right:5px}
+.checks{display:flex;gap:12px;flex-wrap:wrap;padding-top:2px}
+.checks label{display:flex;align-items:center;gap:5px;color:var(--fg);font:13px var(--ui);font-weight:normal;margin:0}
+ol.q{padding-left:22px;margin:6px 0 12px}
+ol.q li{margin:4px 0}
+footer{border-top:2px groove #ffffff;padding:10px 14px;color:var(--muted);font:12px var(--ui);text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="titlebar">
+    <span>ANALIZA_JAKOSCI_WIDEO.EXE - FFmpeg Server Edition</span>
+    <span>[v2.0]</span>
+  </div>
+  <div class="in">
+    <h1>Jakość sekwencji wizyjnych: <span>przeplot</span> i <span>kodek</span></h1>
+    <p>Porównanie standardów H.264 (libx264 z MBAFF), H.265 (libx265) i AV1 dla wideo progressive oraz interlaced. Kodowanie realizowane jest po stronie serwera przy użyciu programu FFmpeg.</p>
+    <p>Metryki obiektywne (PSNR, SSIM) wyznaczane są względem bezstratnego wzorca <b>tej samej wersji</b> (progressive albo interlaced) - mierzą stratę wprowadzoną przez kodek.</p>
+    <div class="badges" id="support"><span class="badge">Sprawdzanie koderów serwera...</span></div>
+  </div>
+</header>
+
+<main>
+<section>
+  <h2>1. Źródło sygnału wizyjnego</h2>
+  <div class="grid">
+    <div style="grid-column:span 2"><label for="file">Plik wideo (.y4m, .mp4, .webm, .mov, .mkv)</label><input type="file" id="file" accept=".y4m,video/*"></div>
+    <div><label for="fps">Klatki/s źródła [kl./s]</label><input type="number" id="fps" value="25" min="1" max="120" step="0.001"></div>
+    <div><label>&nbsp;</label><button id="btnRepo" type="button">Wczytaj sekwencje/hall_monitor.y4m</button></div>
+  </div>
+  <div class="note" id="srcInfo">Nie wczytano pliku. Wybierz plik z dysku albo wczytaj sekwencję testową z repozytorium.</div>
+</section>
+
+<section>
+  <h2>2. Panel sterowania kodowaniem</h2>
+  <div class="grid">
+    <div><label for="kodek">Kodek</label><select id="kodek"><option>H.264</option><option>H.265</option><option>AV1</option></select></div>
+    <div><label for="tryb">Tryb obrazu</label><select id="tryb"><option value="progressive">progressive</option><option value="interlaced">interlaced</option><option value="oba" selected>oba (porównanie)</option></select></div>
+    <div><label>Przepływność: <b id="kbpsV" class="mono">1000</b> kb/s</label><input type="range" id="kbps" min="200" max="10000" step="100" value="1000"></div>
+    <div><label for="latency">Tryb kodera</label><select id="latency"><option value="quality" selected>quality (wolniej, lepiej)</option><option value="realtime">realtime (szybko)</option></select></div>
+    <div><label for="bmode">Tryb przepływności</label><select id="bmode"><option value="variable" selected>zmienna (VBR)</option><option value="constant">stała (CBR)</option></select></div>
+    <div><label for="start">Początek [s]</label><input type="number" id="start" value="0" min="0" step="0.5"></div>
+    <div><label>Długość: <b id="dlugV" class="mono">3</b> s</label><input type="range" id="dlug" min="1" max="6" step="0.5" value="3"></div>
+    <div><label for="szer">Szerokość [px]</label><select id="szer"><option value="0">oryginalna</option><option value="1920">1920</option><option value="1280">1280</option><option value="854" selected>854</option><option value="640">640</option></select></div>
+    <div><label for="kolej">Kolejność półobrazów</label><select id="kolej"><option value="tff" selected>tff (górny pierwszy)</option><option value="bff">bff (dolny pierwszy)</option></select></div>
+    <div><label>Filtr pionowy półobrazów</label><div class="checks"><label><input type="checkbox" id="lowpass" checked> dolnoprzepustowy (FFmpeg)</label></div></div>
+    <div><label>MBAFF (H.264)</label><div class="checks"><label><input type="checkbox" id="mbaff" checked> aktywny (+ildct+ilme)</label></div></div>
+    <div><label>Wzmocnienie różnicy: <b id="gainV" class="mono">8</b>x</label><input type="range" id="gain" min="1" max="30" value="8"></div>
+  </div>
+  <div class="row" style="margin-top:14px">
+    <button class="primary" id="run" disabled>[ Uruchom test ]</button>
+    <span class="mono" id="status"></span>
+  </div>
+  <div class="bar"><i id="prog"></i></div>
+  <div class="tablewrap" id="wynik"></div>
+</section>
+
+<section>
+  <h2>3. Przeglądarka klatek i powiększenie</h2>
+  <p class="muted" style="margin-top:0">Wybierz klatkę oraz wycinek obrazu do powiększenia (żółta ramka). Szukaj efektu <i>combingu</i> (grzebienia) na krawędziach poruszających się obiektów w trybie interlaced, rozmycia, blokowości i pierścieniowania.</p>
+  <div class="grid">
+    <div><label for="vWidok">Widok</label><select id="vWidok"></select></div>
+    <div><label>Klatka: <b id="vKV" class="mono">0</b> / <span id="vKmax" class="mono">0</span></label><input type="range" id="vK" min="0" max="0" value="0"></div>
+    <div><label>Pozycja X [%]</label><input type="range" id="vX" min="0" max="100" value="50"></div>
+    <div><label>Pozycja Y [%]</label><input type="range" id="vY" min="0" max="100" value="50"></div>
+    <div><label>Rozmiar okna [%]</label><input type="range" id="vS" min="3" max="60" value="15"></div>
+    <div><label>Wzmocnienie różnicy [x]</label><input type="range" id="vGain" min="1" max="30" value="8"></div>
+  </div>
+  <div class="row" style="margin-top:10px">
+    <button id="prev" disabled>&lt;&lt; Poprzednia</button><button id="next" disabled>Następna &gt;&gt;</button><button id="play" disabled>Odtwarzaj w pętli</button>
+    <span class="mono" id="vInfo">Najpierw uruchom eksperyment.</span>
+  </div>
+  <div class="panels" id="panels"></div>
+  <div class="charts"><div><canvas id="fcPSNR" data-h="190"></canvas></div><div><canvas id="fcSSIM" data-h="190"></canvas></div></div>
+</section>
+
+<section>
+  <h2>4. Historia uruchomień i wykres jakość-przepływność</h2>
+  <div class="row"><button id="csv" disabled>Pobierz wyniki.csv</button><button id="clr" disabled>Wyczyść historię</button><span class="muted">Linia ciągła = progressive, linia przerywana = interlaced.</span></div>
+  <div class="charts"><div><canvas id="rdPSNR" data-h="260"></canvas></div><div><canvas id="rdSSIM" data-h="260"></canvas></div></div>
+  <div class="legend" id="rdLegend"></div>
+  <div class="tablewrap" id="histTab"></div>
+</section>
+
+<section>
+  <h2>5. Część B: eksperyment seryjny</h2>
+  <p class="muted" style="margin-top:0">Pełna macierz pomiarowa: wybrane kodeki x tryby (progressive i interlaced) x przepływności dla aktualnie wczytanego pliku. Wyniki liczbowe dopisywane są automatycznie do historii.</p>
+  <div class="grid">
+    <div><label>Kodeki</label><div class="checks" id="bCodecs"><label><input type="checkbox" value="H.264" checked>H.264</label><label><input type="checkbox" value="H.265" checked>H.265</label><label><input type="checkbox" value="AV1" checked>AV1</label></div></div>
+    <div><label for="bRates">Przepływności [kb/s], po przecinku</label><input type="text" id="bRates" value="500,1000,2000,4000"></div>
+    <div><label>&nbsp;</label><button id="bRun" disabled>[ Uruchom serię ]</button></div>
+  </div>
+</section>
+
+<section>
+  <h2>6. Wnioski z ćwiczenia</h2>
+  <ol class="q">
+    <li>Który kodek daje najlepszy PSNR/SSIM przy tej samej przepływności? Czy ranking zależy od sekwencji?</li>
+    <li>Jak przeplot wpływa na jakość w każdym kodeku?</li>
+    <li>Gdzie widać <i>combing</i> i kiedy (ruch, krawędzie pionowe, plansze statyczne)?</li>
+    <li>Czy metryki zgadzają się z tym, co widać na obrazie?</li>
+    <li>Jaki jest koszt: czas kodowania vs zysk jakości (kolumna <span class="mono">czas_kodowania_s</span>)?</li>
+  </ol>
+  <textarea id="notes" placeholder="Wpisz tutaj swoje wnioski (zapisują się automatycznie w tej przeglądarce)."></textarea>
+
+  <h3>Uwagi metodologiczne</h3>
+  <div class="note">"Wzorzec" w trybie interlaced to bezstratna wersja z przeplotem (ma "grzebień" już przed kodowaniem); "czyste źródło" to ta sama scena bez przeplotu. Oba tryby mają <b>połowę klatek źródła</b> (np. 24 -&gt; 12 kl./s), więc ruch bywa "szarpany", co wynika z konstrukcji eksperymentu. Wersja interlaced powstaje z dwóch różnych klatek źródła (górne linie z jednej, dolne z drugiej).</div>
+  <div class="note">Kodowanie realizowane jest przez serwerowy FFmpeg: H.264 (libx264) wykorzystuje adaptacyjne kodowanie klatka/pole MBAFF (-flags +ildct+ilme), H.265 (libx265) korzysta z trybu przeplotu interlace=tff/bff, natomiast AV1 koduje klatki progresywnie.</div>
+  <div class="note">Metryki PSNR i SSIM obliczane są bezpośrednio przez filtry psnr oraz ssim programu FFmpeg względem bezstratnego wzorca danej wersji (progressive lub interlaced).</div>
+</section>
+</main>
+<footer>Autorzy projektu: Hubert Cegielski, Bartłomiej Bartczak | Backend: Python + FFmpeg (Northflank)</footer>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const KOLOR = { "H.264": "--c264", "H.265": "--c265", "AV1": "--cav1" };
+const kolor = k => getComputedStyle(document.documentElement).getPropertyValue(KOLOR[k]).trim();
+const ST = { src: null, stan: {}, hist: [], play: null, busy: false };
+
+function bindRange(id, out) {
+  const e = $(id), o = $(out);
+  const f = () => o.textContent = e.value;
+  e.addEventListener("input", f);
+  f();
+}
+bindRange("kbps", "kbpsV");
+bindRange("dlug", "dlugV");
+bindRange("gain", "gainV");
+
+function setProg(f, txt) {
+  $("prog").style.width = Math.round(f * 100) + "%";
+  if (txt != null) $("status").textContent = txt;
+}
+
+function setBusy(b) {
+  ST.busy = b;
+  const ok = !b && !!ST.src;
+  $("run").disabled = $("bRun").disabled = !ok;
+}
+
+function params() {
+  return {
+    kodek: $("kodek").value,
+    kbps: +$("kbps").value,
+    latency: $("latency").value,
+    bmode: $("bmode").value,
+    start: Math.max(0, +$("start").value || 0),
+    dlugosc: +$("dlug").value,
+    szer: +$("szer").value,
+    kolej: $("kolej").value,
+    lowpass: $("lowpass").checked ? "1" : "0",
+    mbaff: $("mbaff").checked ? "1" : "0",
+    gain: +$("gain").value,
+    fps: +$("fps").value || 25,
+  };
+}
+
+async function checkSupport() {
+  const box = $("support");
+  try {
+    const r = await fetch("/api/encoders");
+    const data = await r.json();
+    box.innerHTML = "";
+    for (const k of ["H.264", "H.265", "AV1"]) {
+      const ok = !!data[k];
+      const s = document.createElement("span");
+      s.className = "badge " + (ok ? "ok" : "no");
+      s.textContent = "[" + k + (ok ? ": FFmpeg OK]" : ": BRAK]");
+      box.appendChild(s);
+    }
+  } catch (e) {
+    box.innerHTML = '<span class="badge no">[Błąd połączenia z serwerem Python]</span>';
+  }
+}
+
+async function probeSource(fileObj, repoPath) {
+  stopPlay();
+  ST.src = null;
+  setBusy(true);
+  $("srcInfo").textContent = "Analizowanie pliku na serwerze (ffprobe)...";
+  try {
+    const fd = new FormData();
+    if (fileObj) fd.append("file", fileObj);
+    else fd.append("repo_file", repoPath);
+    const r = await fetch("/api/probe", { method: "POST", body: fd });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || "Błąd odczytu pliku");
+    ST.src = { file: fileObj || null, repoPath: repoPath || null, ...data };
+    $("fps").value = data.fps;
+    $("srcInfo").innerHTML = `<b>${data.name}</b> | ${data.w}x${data.h} | ${data.fps} kl./s | ${data.dur.toFixed(1)} s` +
+      (data.count ? ` | ${data.count} klatek` : "");
+  } catch (e) {
+    ST.src = null;
+    $("srcInfo").textContent = "Błąd: " + e.message;
+  }
+  setBusy(false);
+}
+
+function loadImage(url) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.onload = () => res(img);
+    img.onerror = () => rej(new Error("Błąd dekodowania klatki PNG"));
+    img.src = url;
+  });
+}
+
+async function decodePngSequence(urls, w, h) {
+  if (!urls || !urls.length) return null;
+  const cv = document.createElement("canvas");
+  cv.width = w;
+  cv.height = h;
+  const ctx = cv.getContext("2d", { willReadFrequently: true });
+  const frames = [];
+  for (const u of urls) {
+    const img = await loadImage(u);
+    ctx.clearRect(0, 0, w, h);
+    ctx.drawImage(img, 0, 0, w, h);
+    frames.push(ctx.getImageData(0, 0, w, h));
+  }
+  return frames;
+}
+
+async function runExperiment(p, tryb, keep) {
+  const fd = new FormData();
+  if (ST.src.file) fd.append("file", ST.src.file);
+  else fd.append("repo_file", ST.src.repoPath);
+  fd.append("kodek", p.kodek);
+  fd.append("tryb", tryb);
+  fd.append("kbps", String(p.kbps));
+  fd.append("latency", p.latency);
+  fd.append("bmode", p.bmode);
+  fd.append("start", String(p.start));
+  fd.append("dlugosc", String(p.dlugosc));
+  fd.append("szer", String(p.szer));
+  fd.append("kolej", p.kolej);
+  fd.append("lowpass", p.lowpass);
+  fd.append("mbaff", p.mbaff);
+  fd.append("fps", String(p.fps));
+  fd.append("keep", keep ? "1" : "0");
+
+  const r = await fetch("/api/encode", { method: "POST", body: fd });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error || "Błąd kodowania na serwerze");
+
+  if (keep) {
+    data.ref = await decodePngSequence(data.ref_urls, data.w, data.h);
+    data.enc = await decodePngSequence(data.enc_urls, data.w, data.h);
+    data.clean = data.clean_urls ? await decodePngSequence(data.clean_urls, data.w, data.h) : null;
+  }
+  return data;
+}
+
+async function onRun() {
+  if (ST.busy || !ST.src) return;
+  setBusy(true);
+  stopPlay();
+  const p = params();
+  const modes = $("tryb").value === "oba" ? ["progressive", "interlaced"] : [$("tryb").value];
+  try {
+    const stan = {}, rows = [];
+    for (let i = 0; i < modes.length; i++) {
+      const m = modes[i];
+      setProg((i + 0.2) / modes.length, `Kodowanie na serwerze: ${p.kodek} (${m})...`);
+      const r = await runExperiment(p, m, true);
+      stan[m] = r;
+      rows.push(r.wiersz);
+      ST.hist.push(r.wiersz);
+    }
+    ST.stan = stan;
+    setProg(1, "Gotowe.");
+    $("wynik").innerHTML = tableHtml(rows, ["sekwencja"]);
+    $("vGain").value = p.gain;
+    initViewer();
+    renderHistory();
+  } catch (e) {
+    setProg(0, "BŁĄD: " + e.message);
+  }
+  setBusy(false);
+}
+
+async function onBatch() {
+  if (ST.busy || !ST.src) return;
+  const codecs = [...document.querySelectorAll("#bCodecs input:checked")].map(i => i.value);
+  const rates = $("bRates").value.split(",").map(s => +s.trim()).filter(x => x > 0);
+  if (!codecs.length || !rates.length) {
+    setProg(0, "Wybierz kodeki i przepływności.");
+    return;
+  }
+  setBusy(true);
+  stopPlay();
+  const base = params();
+  const total = codecs.length * rates.length * 2;
+  let k = 0, skipped = [];
+  try {
+    for (const tryb of ["progressive", "interlaced"]) {
+      for (const kodek of codecs) {
+        for (const kbps of rates) {
+          k++;
+          setProg((k - 0.5) / total, `[${k}/${total}] ${kodek} (${tryb}) ${kbps} kb/s...`);
+          try {
+            const r = await runExperiment({ ...base, kodek, kbps }, tryb, false);
+            ST.hist.push(r.wiersz);
+          } catch (e) {
+            skipped.push(`${kodek}: ${e.message}`);
+          }
+          renderHistory();
+        }
+      }
+    }
+    setProg(1, "Seria zakończona." + (skipped.length ? " Pominięto: " + [...new Set(skipped)].join(" | ") : ""));
+  } catch (e) {
+    setProg(0, "BŁĄD: " + e.message);
+  }
+  setBusy(false);
+}
+
+function tableHtml(rows, hide = []) {
+  if (!rows.length) return "";
+  const cols = Object.keys(rows[0]).filter(c => !hide.includes(c));
+  const fmt = (c, v) => typeof v === "number" ? (c === "PSNR" ? v.toFixed(2) : c === "SSIM" ? v.toFixed(4) : String(v)) : String(v);
+  return "<table><thead><tr>" + cols.map(c => `<th>${c}</th>`).join("") + "</tr></thead><tbody>" +
+    rows.map(r => "<tr>" + cols.map(c => `<td>${fmt(c, r[c])}</td>`).join("") + "</tr>").join("") + "</tbody></table>";
+}
+
+function renderHistory() {
+  const h = ST.hist;
+  $("csv").disabled = $("clr").disabled = !h.length;
+  $("histTab").innerHTML = tableHtml(h);
+  const grp = {};
+  for (const r of h) {
+    const key = r.kodek + "|" + r.tryb;
+    ((grp[key] ||= {})[r.bitrate_zadany] ||= []).push(r);
+  }
+  const S = { PSNR: [], SSIM: [] }, leg = [];
+  for (const key of Object.keys(grp).sort()) {
+    const [kodek, tryb] = key.split("|");
+    const pts = Object.values(grp[key]).map(a => ({
+      x: a.reduce((s, r) => s + r.bitrate_rzecz, 0) / a.length,
+      P: a.reduce((s, r) => s + r.PSNR, 0) / a.length,
+      S: a.reduce((s, r) => s + r.SSIM, 0) / a.length
+    })).sort((a, b) => a.x - b.x);
+    const base = { color: kolor(kodek), dash: tryb === "interlaced" ? [6, 4] : [] };
+    S.PSNR.push({ ...base, pts: pts.map(p => [p.x, p.P]) });
+    S.SSIM.push({ ...base, pts: pts.map(p => [p.x, p.S]) });
+    leg.push(`<span><i style="border-color:${base.color};border-top-style:${tryb === "interlaced" ? "dashed" : "solid"}"></i>${kodek} ${tryb}</span>`);
+  }
+  $("rdLegend").innerHTML = leg.join("");
+  lineChart($("rdPSNR"), S.PSNR, { title: "PSNR [dB] vs przepływność" });
+  lineChart($("rdSSIM"), S.SSIM, { title: "SSIM vs przepływność" });
+}
+
+function downloadCsv() {
+  const h = ST.hist;
+  if (!h.length) return;
+  const cols = Object.keys(h[0]);
+  const txt = [cols.join(","), ...h.map(r => cols.map(c => r[c]).join(","))].join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([txt], { type: "text/csv" }));
+  a.download = "wyniki.csv";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+function lineChart(cv, series, o = {}) {
+  const dpr = window.devicePixelRatio || 1, W = cv.clientWidth || 320, H = +cv.dataset.h || 200;
+  cv.width = Math.round(W * dpr);
+  cv.height = Math.round(H * dpr);
+  cv.style.height = H + "px";
+  const g = cv.getContext("2d");
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.fillStyle = "#ffffff";
+  g.fillRect(0, 0, W, H);
+  g.font = "bold 11px 'Courier New',Courier,monospace";
+  g.fillStyle = "#000080";
+  g.fillText(o.title || "", 8, 14);
+  g.font = "11px 'Courier New',Courier,monospace";
+  const pts = series.flatMap(s => s.pts);
+  if (!pts.length) {
+    g.fillStyle = "#666666";
+    g.fillText("[ brak danych ]", 10, 42);
+    return;
+  }
+  let x0 = Math.min(...pts.map(p => p[0])), x1 = Math.max(...pts.map(p => p[0]));
+  let y0 = Math.min(...pts.map(p => p[1])), y1 = Math.max(...pts.map(p => p[1]));
+  if (x0 === x1) { x0 -= 1; x1 += 1; }
+  if (y0 === y1) { y0 -= 1e-3; y1 += 1e-3; }
+  const py = (y1 - y0) * 0.08;
+  y0 -= py;
+  y1 += py;
+  const L = 52, R = 10, T = 24, B = 26;
+  const X = x => L + (x - x0) / (x1 - x0) * (W - L - R);
+  const Y = y => H - B - (y - y0) / (y1 - y0) * (H - T - B);
+  const dec = (y1 - y0) < 0.5 ? 3 : (y1 - y0) < 5 ? 2 : 1;
+  g.strokeStyle = "#cccccc";
+  g.fillStyle = "#000000";
+  g.lineWidth = 1;
+  g.setLineDash([]);
+  for (let i = 0; i <= 4; i++) {
+    const yv = y0 + (y1 - y0) * i / 4, xv = x0 + (x1 - x0) * i / 4;
+    g.beginPath();
+    g.moveTo(L, Y(yv));
+    g.lineTo(W - R, Y(yv));
+    g.stroke();
+    g.fillText(yv.toFixed(dec), 4, Y(yv) + 4);
+    g.fillText(Math.round(xv), X(xv) - 8, H - 10);
+  }
+  g.strokeStyle = "#000000";
+  g.beginPath();
+  g.moveTo(L, T);
+  g.lineTo(L, H - B);
+  g.lineTo(W - R, H - B);
+  g.stroke();
+  for (const s of series) {
+    g.strokeStyle = s.color || "#000000";
+    g.fillStyle = s.color || "#000000";
+    g.lineWidth = 2;
+    g.setLineDash(s.dash || []);
+    g.beginPath();
+    s.pts.forEach((p, i) => i ? g.lineTo(X(p[0]), Y(p[1])) : g.moveTo(X(p[0]), Y(p[1])));
+    g.stroke();
+    if (s.pts.length < 30) {
+      g.setLineDash([]);
+      for (const p of s.pts) g.fillRect(X(p[0]) - 2.5, Y(p[1]) - 2.5, 5, 5);
+    }
+  }
+  if (o.cursor != null) {
+    g.setLineDash([]);
+    g.strokeStyle = "#cc0000";
+    g.lineWidth = 1.5;
+    g.beginPath();
+    g.moveTo(X(o.cursor), T);
+    g.lineTo(X(o.cursor), H - B);
+    g.stroke();
+  }
+}
+
+let panelCount = 0;
+function initViewer() {
+  const keys = Object.keys(ST.stan);
+  if (!keys.length) return;
+  $("vWidok").innerHTML = keys.map(k => `<option>${k}</option>`).join("");
+  setViewerRange();
+  ["prev", "next", "play"].forEach(i => $(i).disabled = false);
+  renderViewer();
+}
+
+function setViewerRange() {
+  const s = ST.stan[$("vWidok").value];
+  if (!s) return;
+  $("vK").max = s.n - 1;
+  $("vK").value = 0;
+  $("vKmax").textContent = s.n - 1;
+}
+
+function ensurePanels(nc) {
+  if (panelCount === nc) return;
+  const box = $("panels");
+  box.style.gridTemplateColumns = `repeat(${nc},minmax(0,1fr))`;
+  box.innerHTML = "";
+  for (let i = 0; i < nc; i++) {
+    const d = document.createElement("div");
+    d.className = "pn";
+    d.innerHTML = '<div class="t"></div><canvas class="f"></canvas><canvas class="z"></canvas>';
+    box.appendChild(d);
+  }
+  panelCount = nc;
+}
+
+function renderViewer() {
+  const s = ST.stan[$("vWidok").value];
+  if (!s || !s.ref) return;
+  const k = Math.min(+$("vK").value, s.n - 1), gain = +$("vGain").value, { w, h } = s;
+  $("vKV").textContent = k;
+  $("vInfo").textContent = `Widok: ${s.tryb} | klatka ${k} z ${s.n - 1} | ${s.fo.toFixed(2)} kl./s`;
+  const a = s.ref[k], b = s.enc[k], d = new ImageData(w, h);
+  for (let i = 0; i < d.data.length; i += 4) {
+    for (let c = 0; c < 3; c++) d.data[i + c] = Math.min(255, Math.abs(a.data[i + c] - b.data[i + c]) * gain);
+    d.data[i + 3] = 255;
+  }
+  const panels = [];
+  if (s.clean) panels.push(["Czyste źródło (progressive)", s.clean[k]]);
+  panels.push([`Wzorzec (${s.tryb}, przed kodowaniem)`, a], ["Po kodowaniu", b], [`Różnica x${gain}`, d]);
+  ensurePanels(panels.length);
+  const size = +$("vS").value / 100, cw = Math.max(Math.round(w * size), 8), ch = Math.max(Math.round(cw * h / w), 8);
+  const x0 = Math.round((w - cw) * $("vX").value / 100), y0 = Math.round((h - ch) * $("vY").value / 100);
+  document.querySelectorAll("#panels .pn").forEach((el, i) => {
+    el.querySelector(".t").textContent = panels[i][0];
+    const f = el.querySelector("canvas.f"), z = el.querySelector("canvas.z");
+    f.width = w;
+    f.height = h;
+    const fc = f.getContext("2d");
+    fc.putImageData(panels[i][1], 0, 0);
+    z.width = cw;
+    z.height = ch;
+    const zc = z.getContext("2d");
+    zc.imageSmoothingEnabled = false;
+    zc.drawImage(f, x0, y0, cw, ch, 0, 0, cw, ch);
+    fc.strokeStyle = "#ffff00";
+    fc.lineWidth = Math.max(1, w / 400);
+    fc.strokeRect(x0, y0, cw, ch);
+  });
+  lineChart($("fcPSNR"), [{ color: kolor("H.264"), pts: s.klatki.PSNR.map((v, i) => [i, v]) }], {
+    title: `PSNR na klatkę (średnia ${s.klatki.PSNR.length ? (s.klatki.PSNR.reduce((x, y) => x + y, 0) / s.n).toFixed(2) : "-"} dB)`,
+    cursor: k
+  });
+  lineChart($("fcSSIM"), [{ color: kolor("H.265"), pts: s.klatki.SSIM.map((v, i) => [i, v]) }], {
+    title: `SSIM na klatkę (średnia ${(s.klatki.SSIM.reduce((x, y) => x + y, 0) / s.n).toFixed(4)})`,
+    cursor: k
+  });
+}
+
+function stopPlay() {
+  if (ST.play) {
+    clearInterval(ST.play);
+    ST.play = null;
+    $("play").textContent = "Odtwarzaj w pętli";
+  }
+}
+
+function togglePlay() {
+  if (ST.play) return stopPlay();
+  const s = ST.stan[$("vWidok").value];
+  if (!s) return;
+  $("play").textContent = "Pauza";
+  ST.play = setInterval(() => {
+    const k = (+$("vK").value + 1) % s.n;
+    $("vK").value = k;
+    renderViewer();
+  }, 1000 / Math.min(Math.max(s.fo, 1), 30));
+}
+
+$("file").addEventListener("change", e => e.target.files[0] && probeSource(e.target.files[0], null));
+$("btnRepo").addEventListener("click", () => probeSource(null, "sekwencje/hall_monitor.y4m"));
+$("run").addEventListener("click", onRun);
+$("bRun").addEventListener("click", onBatch);
+$("csv").addEventListener("click", downloadCsv);
+$("clr").addEventListener("click", () => { ST.hist = []; renderHistory(); });
+$("vWidok").addEventListener("change", () => { setViewerRange(); renderViewer(); });
+for (const id of ["vK", "vX", "vY", "vS", "vGain"]) $(id).addEventListener("input", renderViewer);
+$("prev").addEventListener("click", () => { $("vK").value = Math.max(0, +$("vK").value - 1); renderViewer(); });
+$("next").addEventListener("click", () => { $("vK").value = Math.min(+$("vK").max, +$("vK").value + 1); renderViewer(); });
+$("play").addEventListener("click", togglePlay);
+let rz;
+window.addEventListener("resize", () => {
+  clearTimeout(rz);
+  rz = setTimeout(() => { renderHistory(); renderViewer(); }, 150);
+});
+try {
+  $("notes").value = localStorage.getItem("wnioski") || "";
+  $("notes").addEventListener("input", () => {
+    try { localStorage.setItem("wnioski", $("notes").value); } catch (e) {}
+  });
+} catch (e) {}
+
+renderHistory();
+checkSupport();
+</script>
+</body>
+</html>
