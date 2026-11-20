@@ -371,13 +371,17 @@ def encode_video():
 
             ref_urls, w, h = jpg_list_to_data_urls(os.path.join(tmpdir, "ref_*.jpg"))
             enc_urls, _, _ = jpg_list_to_data_urls(os.path.join(tmpdir, "enc_*.jpg"))
-            m = min(len(ref_urls), len(enc_urls), n_frames)
+            lengths = [len(ref_urls), len(enc_urls), n_frames]
+            if clean_urls is not None:
+                lengths.append(len(clean_urls))
+            m = min(lengths)
+
             payload["n"] = m
             payload["w"] = w
             payload["h"] = h
             payload["ref_urls"] = ref_urls[:m]
             payload["enc_urls"] = enc_urls[:m]
-            payload["clean_urls"] = clean_urls[:m] if clean_urls else None
+            payload["clean_urls"] = clean_urls[:m] if clean_urls is not None else None
             payload["klatki"]["PSNR"] = psnr_vals[:m]
             payload["klatki"]["SSIM"] = ssim_vals[:m]
 
