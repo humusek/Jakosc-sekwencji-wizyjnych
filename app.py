@@ -1,4 +1,5 @@
 import base64
+import gc
 import glob
 import os
 import re
@@ -14,7 +15,7 @@ app = Flask(__name__)
 def run_cmd(cmd):
     proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     if proc.returncode != 0:
-        raise RuntimeError(proc.stderr[-700:])
+        raise RuntimeError(proc.stderr[-600:])
     return proc
 
 
@@ -49,16 +50,35 @@ def resolve_input_file(tmpdir):
     )
 
 
-def png_list_to_data_urls(pattern):
+def jpeg_size(raw):
+    i = 2
+    n = len(raw)
+    while i + 9 < n:
+        if raw[i] != 0xFF:
+            break
+        marker = raw[i + 1]
+        if marker in (0xC0, 0xC1, 0xC2):
+            h, w = struct.unpack(">HH", raw[i + 5:i + 9])
+            return w, h
+        if marker in (0xD8, 0xD9) or (0xD0 <= marker <= 0xD7):
+            i += 2
+        else:
+            seg_len = struct.unpack(">H", raw[i + 2:i + 4])[0]
+            i += 2 + seg_len
+    return 0, 0
+
+
+def jpg_list_to_data_urls(pattern):
     files = sorted(glob.glob(pattern))
     urls = []
     w, h = 0, 0
     for idx, path in enumerate(files):
         with open(path, "rb") as fp:
             raw = fp.read()
-        if idx == 0 and len(raw) >= 24:
-            w, h = struct.unpack(">II", raw[16:24])
-        urls.append("data:image/png;base64," + base64.b64encode(raw).decode("ascii"))
+        if idx == 0:
+            w, h = jpeg_size(raw)
+        urls.append("data:image/jpeg;base64," + base64.b64encode(raw).decode("ascii"))
+        os.remove(path)
     return urls, w, h
 
 
@@ -133,6 +153,7 @@ def probe_video():
         else:
             dur = 10.0
 
+        gc.collect()
         return jsonify({
             "name": src_name,
             "w": w,
@@ -151,8 +172,9 @@ def encode_video():
     latency = request.form.get("latency", "quality")
     bmode = request.form.get("bmode", "variable")
     start = max(0.0, float(request.form.get("start", 0)))
-    dlugosc = max(0.5, float(request.form.get("dlugosc", 3)))
-    szer = int(request.form.get("szer", 854))
+    dlugosc = min(3.0, max(0.5, float(request.form.get("dlugosc", 2.5))))
+    szer_raw = int(request.form.get("szer", 640))
+    szer = 854 if (szer_raw == 0 or szer_raw > 854) else szer_raw
     kolej = request.form.get("kolej", "tff")
     lowpass = request.form.get("lowpass", "1") == "1"
     mbaff = request.form.get("mbaff", "1") == "1"
@@ -176,7 +198,7 @@ def encode_video():
         ssim_log = os.path.join(tmpdir, "ssim.log")
 
         out_fps = fps / 2.0
-        base_scale = [f"scale={szer}:-2:flags=bicubic"] if szer > 0 else ["scale=trunc(iw/2)*2:trunc(ih/2)*2"]
+        base_scale = [f"scale={szer}:-2:flags=fast_bilinear"]
 
         if tryb == "interlaced":
             lp = 1 if lowpass else 0
@@ -185,7 +207,7 @@ def encode_video():
             ref_filters = base_scale + [f"select='not(mod(n\\,2))',setpts=N/({out_fps}*TB)"]
 
         ref_cmd = [
-            "ffmpeg", "-y", "-ss", str(start), "-t", str(dlugosc),
+            "ffmpeg", "-y", "-threads", "1", "-ss", str(start), "-t", str(dlugosc),
             "-i", in_path, "-vf", ",".join(ref_filters),
             "-pix_fmt", "yuv420p", ref_path
         ]
@@ -197,7 +219,7 @@ def encode_video():
         if keep and tryb == "interlaced":
             clean_filters = base_scale + [f"select='not(mod(n\\,2))',setpts=N/({out_fps}*TB)"]
             clean_cmd = [
-                "ffmpeg", "-y", "-ss", str(start), "-t", str(dlugosc),
+                "ffmpeg", "-y", "-threads", "1", "-ss", str(start), "-t", str(dlugosc),
                 "-i", in_path, "-vf", ",".join(clean_filters),
                 "-pix_fmt", "yuv420p", clean_path
             ]
@@ -206,26 +228,34 @@ def encode_video():
             except RuntimeError as e:
                 return jsonify({"error": f"Blad przygotowania czystego zrodla: {e}"}), 500
 
+        if os.path.dirname(in_path) == tmpdir and os.path.exists(in_path):
+            os.remove(in_path)
+
         enc_cmd = ["ffmpeg", "-y", "-i", ref_path, "-threads", "1"]
 
         if kodek == "H.264":
-            preset = "ultrafast" if latency == "realtime" else "medium"
+            preset = "ultrafast" if latency == "realtime" else "fast"
             enc_cmd += ["-c:v", "libx264", "-preset", preset]
+            x264_opts = ["rc-lookahead=5", "threads=1"]
             if tryb == "interlaced" and mbaff:
                 parity = "tff=1" if kolej == "tff" else "bff=1"
-                enc_cmd += ["-flags", "+ildct+ilme", "-x264-params", parity]
+                enc_cmd += ["-flags", "+ildct+ilme"]
+                x264_opts.insert(0, parity)
+            enc_cmd += ["-x264-params", ":".join(x264_opts)]
         elif kodek == "H.265":
-            preset = "ultrafast" if latency == "realtime" else "medium"
+            preset = "ultrafast" if latency == "realtime" else "fast"
             enc_cmd += ["-c:v", "libx265", "-preset", preset]
+            x265_opts = ["rc-lookahead=5", "frame-threads=1", "pools=none"]
             if tryb == "interlaced":
-                enc_cmd += ["-x265-params", f"interlace={kolej}"]
+                x265_opts.insert(0, f"interlace={kolej}")
+            enc_cmd += ["-x265-params", ":".join(x265_opts)]
         elif kodek == "AV1":
             if encs["AV1"] == "libsvtav1":
-                preset = "10" if latency == "realtime" else "6"
-                enc_cmd += ["-c:v", "libsvtav1", "-preset", preset]
+                preset = "11" if latency == "realtime" else "8"
+                enc_cmd += ["-c:v", "libsvtav1", "-preset", preset, "-svtav1-params", "lp=1:lookahead=4"]
             else:
-                cpu_used = "8" if latency == "realtime" else "4"
-                enc_cmd += ["-c:v", "libaom-av1", "-cpu-used", cpu_used]
+                cpu_used = "8" if latency == "realtime" else "6"
+                enc_cmd += ["-c:v", "libaom-av1", "-cpu-used", cpu_used, "-lag-in-frames", "4"]
 
         enc_cmd += ["-b:v", f"{kbps}k"]
         if bmode == "constant":
@@ -240,7 +270,7 @@ def encode_video():
         encode_sec = time.perf_counter() - t0
 
         metric_cmd = [
-            "ffmpeg", "-y", "-i", out_path, "-i", ref_path,
+            "ffmpeg", "-y", "-threads", "1", "-i", out_path, "-i", ref_path,
             "-lavfi", f"[0:v][1:v]psnr=stats_file={psnr_log};[0:v][1:v]ssim=stats_file={ssim_log}",
             "-f", "null", "-"
         ]
@@ -284,14 +314,19 @@ def encode_video():
         }
 
         if keep:
-            run_cmd(["ffmpeg", "-y", "-i", ref_path, "-vframes", "30", os.path.join(tmpdir, "ref_%04d.png")])
-            run_cmd(["ffmpeg", "-y", "-i", out_path, "-vframes", "30", os.path.join(tmpdir, "enc_%04d.png")])
-            ref_urls, w, h = png_list_to_data_urls(os.path.join(tmpdir, "ref_*.png"))
-            enc_urls, _, _ = png_list_to_data_urls(os.path.join(tmpdir, "enc_*.png"))
+            run_cmd(["ffmpeg", "-y", "-threads", "1", "-i", ref_path, "-vframes", "12", "-q:v", "4", os.path.join(tmpdir, "ref_%04d.jpg")])
+            if os.path.exists(ref_path):
+                os.remove(ref_path)
+            run_cmd(["ffmpeg", "-y", "-threads", "1", "-i", out_path, "-vframes", "12", "-q:v", "4", os.path.join(tmpdir, "enc_%04d.jpg")])
+            if os.path.exists(out_path):
+                os.remove(out_path)
+            ref_urls, w, h = jpg_list_to_data_urls(os.path.join(tmpdir, "ref_*.jpg"))
+            enc_urls, _, _ = jpg_list_to_data_urls(os.path.join(tmpdir, "enc_*.jpg"))
             clean_urls = None
             if tryb == "interlaced" and os.path.exists(clean_path):
-                run_cmd(["ffmpeg", "-y", "-i", clean_path, "-vframes", "30", os.path.join(tmpdir, "clean_%04d.png")])
-                clean_urls, _, _ = png_list_to_data_urls(os.path.join(tmpdir, "clean_*.png"))
+                run_cmd(["ffmpeg", "-y", "-threads", "1", "-i", clean_path, "-vframes", "12", "-q:v", "4", os.path.join(tmpdir, "clean_%04d.jpg")])
+                os.remove(clean_path)
+                clean_urls, _, _ = jpg_list_to_data_urls(os.path.join(tmpdir, "clean_*.jpg"))
             m = min(len(ref_urls), len(enc_urls), n_frames)
             payload["n"] = m
             payload["w"] = w
@@ -302,6 +337,7 @@ def encode_video():
             payload["klatki"]["PSNR"] = psnr_vals[:m]
             payload["klatki"]["SSIM"] = ssim_vals[:m]
 
+        gc.collect()
         return jsonify(payload)
 
 
