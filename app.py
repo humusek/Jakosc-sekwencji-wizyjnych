@@ -268,13 +268,38 @@ def timeline(out_fps):
 
 
 def filters_for(tryb, szer, out_fps, kolej, lowpass):
-    vf = scale_chain(szer)
-    if tryb == "interlaced":
-        vf.append(f"interlace=scan={kolej}:lowpass={1 if lowpass else 0}")
-    else:
-        vf.append("framestep=2")
-    vf.append(timeline(out_fps))
+    """Lancuch -vf dla sciezki progressive (co druga klatka zrodla)."""
+    vf = scale_chain(szer) + ["framestep=2", timeline(out_fps)]
     return ",".join(vf)
+
+
+def weave_graph(szer, out_fps, kolej, lowpass):
+    """Przeplot zlozony JAWNIE z dwooch strumieni: klatki parzyste (0,2,4..) i nieparzyste (1,3,5..).
+
+    Klatka wyjsciowa k = polklatki z klatek zrodla 2k i 2k+1. Nie korzystamy z filtru 'interlace', bo jego
+    tempo wyjsciowe zalezy od wersji FFmpeg (na niektorych buildach wzorzec jest spowolniony 2x).
+    Bez filtru dolnoprzepustowego wynik jest bit-w-bit identyczny z 'interlace'; z filtrem rozni sie
+    co najwyzej o 1 poziom jasnosci (filtr pionowy 1-2-1 po sasiednich liniach, jak w tinterlace).
+    """
+    lp = ""
+    if lowpass:
+        m = "0 1 0 0 2 0 0 1 0"
+        lp = "," + ":".join(["convolution=0m='%s'" % m, "0rdiv=0.25",
+                              "1m='%s'" % m, "1rdiv=0.25", "2m='%s'" % m, "2rdiv=0.25"])
+    # tff: gorne (parzyste) linie z pierwszej klatki pary; bff: z drugiej
+    ins = "[e][o]" if kolej == "tff" else "[o][e]"
+    return (
+        f"[0:v]{','.join(scale_chain(szer))}{lp},split=2[a][b];"
+        "[a]select='eq(mod(n,2),0)',setpts=N/TB[e];"
+        "[b]select='eq(mod(n,2),1)',setpts=N/TB[o];"
+        f"{ins}blend=all_expr='if(eq(mod(Y,2),0),A,B)':shortest=1,{timeline(out_fps)}[v]"
+    )
+
+
+def reference_args(tryb, szer, out_fps, kolej, lowpass):
+    if tryb == "interlaced":
+        return ["-filter_complex", weave_graph(szer, out_fps, kolej, lowpass), "-map", "[v]"]
+    return ["-vf", filters_for(tryb, szer, out_fps, kolej, lowpass)]
 
 
 def ffmpeg_base(start):
@@ -331,8 +356,8 @@ def run_experiment(p, in_path, src_name, info):
         ssim_log = os.path.join(tmp, "ssim.log")
 
         # 1) wzorzec (bezstratny, surowe wideo): dokladnie N klatek
-        vf_ref = filters_for(tryb, p["szer"], out_fps, p["kolej"], p["lowpass"])
-        run_cmd(ffmpeg_base(p["start"]) + ["-i", in_path, "-an", "-vf", vf_ref] + pt +
+        ref_args = reference_args(tryb, p["szer"], out_fps, p["kolej"], p["lowpass"])
+        run_cmd(ffmpeg_base(p["start"]) + ["-i", in_path, "-an"] + ref_args + pt +
                 ["-frames:v", str(n), "-c:v", "rawvideo", "-pix_fmt", "yuv420p", "-f", "nut", ref_path])
 
         # 2) czyste zrodlo (progressive) dla widoku przeplotu: te same N klatek
