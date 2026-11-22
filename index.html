@@ -21,7 +21,9 @@ header{background:var(--panel);border-bottom:2px groove #ffffff;padding:0 0 12px
 .titlebar{background:var(--accent);color:var(--accent-fg);padding:5px 10px;font:bold 13px var(--ui);letter-spacing:.02em;display:flex;justify-content:space-between;align-items:center}
 header .in{padding:12px 14px 2px}
 h1{font:bold 24px/1.2 var(--serif);margin:0 0 8px;color:#000080}
-h1 span{text-decoration:underline}
+h1 a{color:#0000ee;text-decoration:underline}
+h1 a:visited{color:#551a8b}
+h1 a:hover{color:#ff0000}
 header p{margin:4px 0;max-width:85ch;color:var(--fg);font-size:14px}
 main{padding:0 10px 14px}
 section{background:var(--panel);border:2px groove #ffffff;padding:14px 16px;margin:14px 0}
@@ -88,7 +90,7 @@ footer{border-top:2px groove #ffffff;padding:10px 14px;color:var(--muted);font:1
     <span>[v2.0]</span>
   </div>
   <div class="in">
-    <h1>Jakość sekwencji wizyjnych: <span>przeplot</span> i <span>kodek</span></h1>
+    <h1>Jakość sekwencji wizyjnych: <a href="https://pl.wikipedia.org/wiki/Przeplot?useskin=monobook" target="_blank" rel="noopener">przeplot</a> i <a href="https://pl.wikipedia.org/wiki/Kodek?useskin=monobook" target="_blank" rel="noopener">kodek</a></h1>
     <p>Porównanie standardów H.264 (libx264 z MBAFF), H.265 (libx265) i AV1 dla wideo progressive oraz interlaced. Kodowanie realizowane jest po stronie serwera przy użyciu programu FFmpeg.</p>
     <p>Metryki obiektywne (PSNR, SSIM) wyznaczane są względem bezstratnego wzorca <b>tej samej wersji</b> (progressive albo interlaced) - mierzą stratę wprowadzoną przez kodek.</p>
     <div class="badges" id="support"><span class="badge">Sprawdzanie koderów serwera...</span></div>
@@ -101,9 +103,8 @@ footer{border-top:2px groove #ffffff;padding:10px 14px;color:var(--muted);font:1
   <div class="grid">
     <div style="grid-column:span 2"><label for="file">Plik wideo (.y4m, .mp4, .webm, .mov, .mkv)</label><input type="file" id="file" accept=".y4m,video/*"></div>
     <div><label for="fps">Klatki/s źródła [kl./s]</label><input type="number" id="fps" value="25" min="1" max="120" step="0.001"></div>
-    <div><label>&nbsp;</label><button id="btnRepo" type="button">Wczytaj sekwencje/hall_monitor.y4m</button></div>
   </div>
-  <div class="note" id="srcInfo">Nie wczytano pliku. Wybierz plik z dysku albo wczytaj sekwencję testową z repozytorium.</div>
+  <div class="note" id="srcInfo">Nie wczytano pliku. Wybierz plik wideo z dysku.</div>
 </section>
 
 <section>
@@ -168,20 +169,8 @@ footer{border-top:2px groove #ffffff;padding:10px 14px;color:var(--muted);font:1
 </section>
 
 <section>
-  <h2>6. Wnioski z ćwiczenia</h2>
-  <ol class="q">
-    <li>Który kodek daje najlepszy PSNR/SSIM przy tej samej przepływności? Czy ranking zależy od sekwencji?</li>
-    <li>Jak przeplot wpływa na jakość w każdym kodeku?</li>
-    <li>Gdzie widać <i>combing</i> i kiedy (ruch, krawędzie pionowe, plansze statyczne)?</li>
-    <li>Czy metryki zgadzają się z tym, co widać na obrazie?</li>
-    <li>Jaki jest koszt: czas kodowania vs zysk jakości (kolumna <span class="mono">czas_kodowania_s</span>)?</li>
-  </ol>
-  <textarea id="notes" placeholder="Wpisz tutaj swoje wnioski (zapisują się automatycznie w tej przeglądarce)."></textarea>
-
-  <h3>Uwagi metodologiczne</h3>
-  <div class="note">"Wzorzec" w trybie interlaced to bezstratna wersja z przeplotem (ma "grzebień" już przed kodowaniem); "czyste źródło" to ta sama scena bez przeplotu. Oba tryby mają <b>połowę klatek źródła</b> (np. 24 -&gt; 12 kl./s), więc ruch bywa "szarpany", co wynika z konstrukcji eksperymentu. Wersja interlaced powstaje z dwóch różnych klatek źródła (górne linie z jednej, dolne z drugiej).</div>
-  <div class="note">Kodowanie realizowane jest przez serwerowy FFmpeg: H.264 (libx264) wykorzystuje adaptacyjne kodowanie klatka/pole MBAFF (-flags +ildct+ilme), H.265 (libx265) korzysta z trybu przeplotu interlace=tff/bff, natomiast AV1 koduje klatki progresywnie.</div>
-  <div class="note">Metryki PSNR i SSIM obliczane są bezpośrednio przez filtry psnr oraz ssim programu FFmpeg względem bezstratnego wzorca danej wersji (progressive lub interlaced).</div>
+  <h2>6. Notatki</h2>
+  <textarea id="notes" placeholder="Wpisz tutaj swoje notatki (zapisują się automatycznie w tej przeglądarce)."></textarea>
 </section>
 </main>
 <footer>Autorzy projektu: Hubert Cegielski, Bartłomiej Bartczak | Backend: Python + FFmpeg (Northflank)</footer>
@@ -683,7 +672,6 @@ function togglePlay() {
 }
 
 $("file").addEventListener("change", e => e.target.files[0] && probeSource(e.target.files[0], null));
-$("btnRepo").addEventListener("click", () => probeSource(null, "sekwencje/hall_monitor.y4m"));
 $("fps").addEventListener("input", applyDurLimit);
 $("run").addEventListener("click", onRun);
 $("bRun").addEventListener("click", onBatch);
