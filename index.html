@@ -115,7 +115,7 @@ footer{border-top:2px groove #ffffff;padding:10px 14px;color:var(--muted);font:1
     <div><label for="latency">Tryb kodera</label><select id="latency"><option value="quality" selected>quality (wolniej, lepiej)</option><option value="realtime">realtime (szybko)</option></select></div>
     <div><label for="bmode">Tryb przepływności</label><select id="bmode"><option value="variable" selected>zmienna (VBR)</option><option value="constant">stała (CBR)</option></select></div>
     <div><label for="start">Początek [s]</label><input type="number" id="start" value="0" min="0" step="0.5"></div>
-    <div><label>Długość: <b id="dlugV" class="mono">3</b> s</label><input type="range" id="dlug" min="1" max="6" step="0.5" value="3"></div>
+    <div><label>Długość: <b id="dlugV" class="mono">3</b> s <span id="dlugHint" class="muted"></span></label><input type="range" id="dlug" min="1" max="10" step="0.5" value="3"></div>
     <div><label for="szer">Szerokość [px]</label><select id="szer"><option value="0">oryginalna</option><option value="1920">1920</option><option value="1280">1280</option><option value="854" selected>854</option><option value="640">640</option></select></div>
     <div><label for="kolej">Kolejność półobrazów</label><select id="kolej"><option value="tff" selected>tff (górny pierwszy)</option><option value="bff">bff (dolny pierwszy)</option></select></div>
     <div><label>Filtr pionowy półobrazów</label><div class="checks"><label><input type="checkbox" id="lowpass" checked> dolnoprzepustowy (FFmpeg)</label></div></div>
@@ -245,6 +245,18 @@ async function checkSupport() {
       s.textContent = "[" + k + (ok ? ": FFmpeg OK]" : ": BRAK]");
       box.appendChild(s);
     }
+    if (data._ffmpeg) {
+      const v = document.createElement("span");
+      v.className = "badge";
+      v.textContent = "[" + data._ffmpeg.replace(/^ffmpeg version\s+/, "ffmpeg ").split(" Copyright")[0] + "]";
+      box.appendChild(v);
+      const a = document.createElement("a");
+      a.href = "/api/selftest";
+      a.target = "_blank";
+      a.textContent = "[test synchronizacji]";
+      a.style.marginLeft = "6px";
+      box.appendChild(a);
+    }
   } catch (e) {
     box.innerHTML = '<span class="badge no">[Błąd połączenia z serwerem Python]</span>';
   }
@@ -253,6 +265,8 @@ async function checkSupport() {
 async function probeSource(fileObj, repoPath) {
   stopPlay();
   ST.src = null;
+  ST.stan = {};
+  clearViewer();
   setBusy(true);
   $("srcInfo").textContent = "Analizowanie pliku na serwerze (ffprobe)...";
   try {
@@ -264,6 +278,7 @@ async function probeSource(fileObj, repoPath) {
     if (!r.ok) throw new Error(data.error || "Błąd odczytu pliku");
     ST.src = { file: fileObj || null, repoPath: repoPath || null, ...data };
     $("fps").value = data.fps;
+    applyDurLimit();
     $("srcInfo").innerHTML = `<b>${data.name}</b> | ${data.w}x${data.h} | ${data.fps} kl./s | ${data.dur.toFixed(1)} s` +
       (data.count ? ` | ${data.count} klatek` : "");
   } catch (e) {
@@ -271,6 +286,32 @@ async function probeSource(fileObj, repoPath) {
     $("srcInfo").textContent = "Błąd: " + e.message;
   }
   setBusy(false);
+}
+
+// Limit klatek na jedno uruchomienie (serwer: MAX_FRAMES). Każda wyjściowa klatka zużywa 2 klatki źródła,
+// więc przy dużym fps maksymalna długość fragmentu jest krótsza. Suwak jej nie przekroczy.
+function applyDurLimit() {
+  const fps = +$("fps").value || 25;
+  const maxFrames = (ST.src && ST.src.max_frames) || 90;
+  const maxD = Math.max(1, Math.min(10, Math.floor(maxFrames * 2 / fps * 2) / 2));
+  const sl = $("dlug");
+  sl.max = maxD;
+  if (+sl.value > maxD) sl.value = maxD;
+  $("dlugV").textContent = sl.value;
+  $("dlugHint").textContent = `(max ${maxD} s przy ${fps} kl./s, limit ${maxFrames} klatek)`;
+}
+
+function clearViewer() {
+  stopPlay();
+  $("vWidok").innerHTML = "";
+  $("panels").innerHTML = "";
+  panelCount = 0;
+  ["prev", "next", "play"].forEach(i => $(i).disabled = true);
+  $("vK").max = 0;
+  $("vK").value = 0;
+  $("vKmax").textContent = 0;
+  $("vKV").textContent = 0;
+  $("vInfo").textContent = "Najpierw uruchom eksperyment.";
 }
 
 function loadImage(url) {
@@ -300,7 +341,8 @@ async function decodeImageSequence(urls, w, h) {
 
 async function runExperiment(p, tryb, keep) {
   const fd = new FormData();
-  if (ST.src.file) fd.append("file", ST.src.file);
+  if (ST.src.file_id) fd.append("file_id", ST.src.file_id);
+  else if (ST.src.file) fd.append("file", ST.src.file);
   else fd.append("repo_file", ST.src.repoPath);
   fd.append("kodek", p.kodek);
   fd.append("tryb", tryb);
@@ -316,14 +358,25 @@ async function runExperiment(p, tryb, keep) {
   fd.append("fps", String(p.fps));
   fd.append("keep", keep ? "1" : "0");
 
-  const r = await fetch("/api/encode", { method: "POST", body: fd });
-  const data = await r.json();
+  let r = await fetch("/api/encode", { method: "POST", body: fd });
+  let data = await r.json();
+  if (r.status === 404 && ST.src.file_id && ST.src.file) {
+    // plik wygasł na serwerze (restart / limit czasu): wyślij go ponownie
+    fd.delete("file_id");
+    fd.append("file", ST.src.file);
+    r = await fetch("/api/encode", { method: "POST", body: fd });
+    data = await r.json();
+  }
   if (!r.ok) throw new Error(data.error || "Błąd kodowania na serwerze");
+  if (data.file_id) ST.src.file_id = data.file_id;
 
   if (keep) {
     data.ref = await decodeImageSequence(data.ref_urls, data.w, data.h);
     data.enc = await decodeImageSequence(data.enc_urls, data.w, data.h);
     data.clean = data.clean_urls ? await decodeImageSequence(data.clean_urls, data.w, data.h) : null;
+    delete data.ref_urls;
+    delete data.enc_urls;
+    delete data.clean_urls;
   }
   return data;
 }
@@ -334,25 +387,35 @@ async function onRun() {
   stopPlay();
   const p = params();
   const modes = $("tryb").value === "oba" ? ["progressive", "interlaced"] : [$("tryb").value];
-  try {
-    const stan = {}, rows = [];
-    for (let i = 0; i < modes.length; i++) {
-      const m = modes[i];
-      setProg((i + 0.2) / modes.length, `Kodowanie na serwerze: ${p.kodek} (${m})...`);
+  const stan = {}, rows = [], errors = [], warns = [];
+  ST.stan = {};              // nie pokazuj starych wyników, gdy nowy przebieg się nie uda
+  $("wynik").innerHTML = "";
+  for (let i = 0; i < modes.length; i++) {
+    const m = modes[i];
+    setProg((i + 0.2) / modes.length, `Kodowanie na serwerze: ${p.kodek} (${m})...`);
+    try {
       const r = await runExperiment(p, m, true);
       stan[m] = r;
       rows.push(r.wiersz);
       ST.hist.push(r.wiersz);
+      if (r.ostrzezenie) warns.push(`${m}: ${r.ostrzezenie}`);
+    } catch (e) {
+      errors.push(`${m}: ${e.message}`);
     }
-    ST.stan = stan;
-    setProg(1, "Gotowe.");
+  }
+  ST.stan = stan;
+  const ns = Object.values(stan).map(s => s.n);
+  if (ns.length > 1 && new Set(ns).size > 1) warns.push("różna liczba klatek między trybami: " + ns.join(" vs "));
+  if (rows.length) {
     $("wynik").innerHTML = tableHtml(rows, ["sekwencja"]);
     $("vGain").value = p.gain;
     initViewer();
     renderHistory();
-  } catch (e) {
-    setProg(0, "BŁĄD: " + e.message);
+  } else {
+    clearViewer();
   }
+  setProg(rows.length ? 1 : 0, (errors.length ? "BŁĘDY: " + errors.join(" | ") : "Gotowe.") +
+    (warns.length ? " UWAGA: " + warns.join(" | ") : ""));
   setBusy(false);
 }
 
@@ -555,7 +618,9 @@ function renderViewer() {
   $("vK").value = k;
   const gain = +$("vGain").value, { w, h } = s;
   $("vKV").textContent = k;
-  $("vInfo").textContent = `Widok: ${s.tryb} | klatka ${k} z ${maxIdx} | ${s.fo.toFixed(2)} kl./s`;
+  const sf = (s.start_frame || 0) + 2 * k;
+  const srcTxt = s.tryb === "interlaced" ? `klatki źródła #${sf} (górne linie) + #${sf + 1} (dolne linie)` : `klatka źródła #${sf}`;
+  $("vInfo").textContent = `Widok: ${s.tryb} | klatka ${k} z ${maxIdx} | ${s.fo.toFixed(2)} kl./s | ${srcTxt}`;
   const a = s.ref[k], b = s.enc[k];
   if (!a || !b) return;
   const d = new ImageData(w, h);
@@ -619,6 +684,7 @@ function togglePlay() {
 
 $("file").addEventListener("change", e => e.target.files[0] && probeSource(e.target.files[0], null));
 $("btnRepo").addEventListener("click", () => probeSource(null, "sekwencje/hall_monitor.y4m"));
+$("fps").addEventListener("input", applyDurLimit);
 $("run").addEventListener("click", onRun);
 $("bRun").addEventListener("click", onBatch);
 $("csv").addEventListener("click", downloadCsv);
